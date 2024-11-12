@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <script>
+    (function (m, a, z, e) {
+      let s;
+      let t;
+      try {
+        t = m.sessionStorage.getItem('maze-us');
+      } catch (err) {
+        // Handle error
+      }
+
+      if (!t) {
+        t = new Date().getTime();
+        try {
+          m.sessionStorage.setItem('maze-us', t);
+        } catch (err) {
+          // Handle error
+        }
+      }
+
+      s = a.createElement('script');
+      s.src = `${z}?apiKey=${e}`;
+      s.async = true;
+      a.getElementsByTagName('head')[0].appendChild(s);
+      m.mazeUniversalSnippetApiKey = e;
+    })(
+      window,
+      document,
+      'https://snippet.maze.co/maze-universal-loader.js',
+      '5e2a7253-697a-42d0-99a8-8b5332c0ae1e'
+    );
+  </script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+  <link rel="stylesheet" href="/styles.css"/>
+</head>
+<body>
+  <div id="spinner" class="centerTop center">
+    <span class="loader"></span>
+  </div>
+  <div id="modal" class="modalContainer">
+    <div class="modalContent">
+      <button class="close" onClick="hideModal()">✖</button>
+      <p id="modal-text">Failed to launch live camera. Permissions not granted</p>
+      <button id="modal-button" class="accept">Open Manual Camera</button>
+    </div>
+  </div>
+  <div id="menu" class="centerTop" style="display: none;">
+    <button id="live-doc-button" class="menuButton">SmartCapture-Document</button>
+    <button id="live-face-button" class="menuButton">SmartCapture-Face</button>
+    <button id="sdk-docs-button" class="menuButton" onclick="window.location.href = '/sdk-docs/index.html'">SDK Docs</button>
+  </div>
+
+  <div id="error-camera" class="errorCamera" style="display: none;">
+    Error: camera permissions denied. Please enable camera permissions on your browser to continue.
+  </div>
+  <live-face-camera
+    style="display: none"
+    id="live-face-camera"
+  >
+  </live-face-camera>
+  <div class='centerTop'>
+    <live-document-camera
+      class='documentCamera'
+      id="live-document-camera"
+    >
+    </live-document-camera>
+  </div>
+  <div id="face-result" class="formbg padding-horizontal--48" style="display: none;">
+    <canvas id='face-canvas' class="padding-bottom--24" style="width: 100%;"></canvas>
+    <div class="field padding-bottom--24">
+      <label for="base64-img">Base64 String</label>
+      <textarea id="face-base64-img-input"></textarea>
+    </div>
+    <div class="field padding-bottom--24">
+      <label for="face-score">Score</label>
+      <input id="face-score-input" />
+    </div>
+    <div class="field padding-bottom--24">
+      <label for="face-result">Result</label>
+      <input id="face-result-input" />
+    </div>
+    <div class="field padding-bottom--24">
+      <label for="face-error-code">Error Code</label>
+      <input id="face-error-code-input" />
+    </div>
+    <div class="field padding-bottom--24">
+      <label for="face-description">Description</label>
+      <input id="face-error-description-input" />
+    </div>
+    <div class="field padding-bottom--24">
+      <label for="face-transaction-id">Transaction Id</label>
+      <input id="face-transaction-input" />
+    </div>
+  </div>
+  <div id="doc-result" class="formbg padding-horizontal--48" style="display: none;">
+    <canvas id='doc-canvas' class="padding-bottom--24" style="width: 100%;"></canvas>
+    <div class="field padding-bottom--24">
+      <label for="base64-img">Base64 String</label>
+      <textarea id="base64-img-input"></textarea>
+    </div>
+    <div class="field padding-bottom--24">
+      <label for="doc-is-good">Is good</label>
+      <input id="doc-is-good-input" />
+    </div>
+    <div class="field padding-bottom--24">
+      <label for="doc-sharpness">Sharpness</label>
+      <input id="doc-sharpness-input" />
+    </div>
+    <div class="field padding-bottom--24">
+      <label for="doc-glare">Glare free</label>
+      <input id="doc-glare-input" />
+    </div>
+    <div class="field padding-bottom--24">
+      <label for="doc-dpi">Adequate DPI</label>
+      <input id="doc-dpi-input" />
+    </div>
+    <div class="field padding-bottom--24">
+      <label for="doc-failed-checks">Failed checks</label>
+      <input id="doc-failed-checks-input" />
+    </div>
+    <div class="field padding-bottom--10">
+      <button id="doc-save-button" class="menuButton">Save</button>
+    </div>
+    <div class="field padding-bottom--24">
+      <button id="reset-camera-button" class="menuButton">Capture Back Side</button>
+    </div>
+  </div>
+  <script>
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const hideModal = () => {
+      const modal = document.getElementById('modal');
+      const menu = document.getElementById('menu');
+      modal.style.display = 'none';
+      menu.style.display = 'flex';
+    };
+  </script>
+  <script src='/index.js'></script>
+</body>
+</html>
