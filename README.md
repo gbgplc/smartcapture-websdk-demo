@@ -1,5 +1,7 @@
 # smartcapture-websdk-demo
 
+Documentation can be found here: https://smartcapture-demo.idscan.cloud/demo/sdk-docs/index.html
+
 # End User License Agreement (“EULA”)
 
 **IMPORTANT!**
