@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Demo of Smart Capture Web SDK",
   "main": "index.js",
-  "license": "MIT",
+  "license": "SEE LICENSE IN EULA.txt",
   "private": true,
   "dependencies": {
   }
