@@ -4,7 +4,20 @@
   "description": "Demo of Smart Capture Web SDK",
   "main": "index.js",
   "license": "SEE LICENSE IN EULA.txt",
+  "type": "module",
   "private": true,
+  "scripts": {
+    "build": "rollup -c rollup.config.mjs",
+    "start": "npm run build && wds --config wds.config.js"
+  },
   "dependencies": {
+  },
+  "devDependencies": {
+    "@rollup/plugin-babel": "^6.0.4",
+    "@rollup/plugin-commonjs": "^26.0.1",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@web/dev-server": "^0.4.6",
+    "rollup": "^4.21.1"
   }
 }
