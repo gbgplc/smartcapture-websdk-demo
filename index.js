@@ -11,9 +11,9 @@ const configure = () => {
   face.type = 'module';
   document.body.appendChild(face);
 
-  const credential = document.createElement('script');
-  credential.src = `${basePath}/Credential.js`;
-  document.body.appendChild(credential);
+  // const credential = document.createElement('script');
+  // credential.src = `${basePath}/Credential.js`;
+  // document.body.appendChild(credential);
 };
 
 configure();
