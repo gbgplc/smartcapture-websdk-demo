@@ -1,4 +1,4 @@
-import { startManualFaceCamera, LiveFaceCamera } from '@gbgplc/smartcapture-web';
+import { LiveFaceCamera } from '@gbgplc/smartcapture-web';
 
 const liveFaceCamera = document.getElementById('live-face-camera');
 const menuButtons = document.getElementById('menu');
@@ -33,9 +33,8 @@ const onCaptured = (e) => {
   reader.readAsDataURL(encryptedFile);
   reader.onloadend = () => {
     const base64Data = reader.result;
-    setUIValues('face-base64-img-input', base64Data. replace(/^data:application\/octet-stream;base64,/, ''));
+    setUIValues('face-base64-img-input', base64Data.replace(/^data:application\/octet-stream;base64,/, ''));
   };
-
 
   // Create a new Image element
   const img = new Image();
@@ -65,23 +64,23 @@ const onCaptured = (e) => {
     spinner.style.display = 'none';
   };
 };
+
 const openLiveCamera = () => {
   console.log('live face');
   navigator.mediaDevices.getUserMedia({ video: true })
-  .then(function(stream) {
+    .then(function(stream) {
       console.log('Camera access granted');
       livenessResult.style.display = 'none';
       liveFaceCamera.isOpen = true;
       errorCamera.style.display = 'none';
       // Stop the stream after getting permission
       stream.getTracks().forEach(track => track.stop());
-  })
-  .catch(function(err) {
+    })
+    .catch(function(err) {
       console.error('Error accessing the camera:', err);
       errorCamera.style.display = 'flex';
-  });
+    });
 };
-
 
 const onOpened = () => {
   liveFaceCamera.style.display = 'block';
@@ -89,19 +88,21 @@ const onOpened = () => {
 };
 
 const onClosed = () => {
-  liveFaceCamera.style.display = 'hidden';
+  liveFaceCamera.style.display = 'none';
   if (modal.style.display === 'none' && livenessResult.style.display === 'none') {
     menuButtons.style.display = 'flex';
   }
 };
 
 const onFailure = (e) => {
-  const {error} = e.detail;
+  const { error } = e.detail;
   menuButtons.style.display = 'none';
   modal.style.display = 'flex';
   modalText.innerHTML = error.message;
   modalButton.addEventListener('click', openManualCamera);
 };
+
+
 
 const setupLiveCamera = () => {
   liveFaceCamera.addEventListener(LiveFaceCamera.OpenEventName, onOpened);
@@ -110,7 +111,5 @@ const setupLiveCamera = () => {
   liveFaceCamera.addEventListener(LiveFaceCamera.FailureEventName, onFailure);
   liveFaceCaptureButton.addEventListener('click', openLiveCamera);
 };
-
-
 
 setupLiveCamera();

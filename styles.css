@@ -107,7 +107,12 @@ textarea {
   border-radius: 4px;
   border: 2px solid rgb(53, 53, 53);
 }
-
+@font-face {
+  font-family: 'Inter';
+  src: url('./Inter.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
 .loader {
   margin: 0 auto;
   width: 48px;

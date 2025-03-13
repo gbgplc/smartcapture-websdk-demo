@@ -105,6 +105,8 @@ const openLiveCamera = () => {
     navigator.mediaDevices.getUserMedia({ video: true })
     .then((stream) => {
         console.log('Camera access granted');
+        liveDocumentCamera.setShowBackOfDocumentAnimation(false);
+
         liveDocumentCamera.forceManualCamera = false;
         menuButtons.style.display = 'none';
         liveDocumentCamera.style.display = 'block';
@@ -136,6 +138,7 @@ const resetCamera = () => {
   documentResult.style.display = 'none';
   liveDocumentCamera.style.display = 'block';
   liveDocumentCamera.isOpen = true;
+  liveDocumentCamera.setShowBackOfDocumentAnimation(true);
 };
 
 const setupDocCamera = () => {
