@@ -10,6 +10,7 @@ const modalText = document.getElementById('modal-text');
 const modalButton = document.getElementById('modal-button');
 const errorCamera = document.getElementById('error-camera');
 const faceCanvas = document.getElementById('face-canvas');
+const saveButton = document.getElementById('face-save-button');
 
 const setUIValues = (id, value) => {
   const el = document.getElementById(id);
@@ -44,8 +45,8 @@ const onCaptured = (e) => {
   img.onload = () => {
     // Get canvas context and set dimensions based on the image data
     const faceContext = faceCanvas.getContext('2d');
-    faceCanvas.height = img.imageHeight;
-    faceCanvas.width = img.imageWidth;
+    faceCanvas.height = img.naturalHeight;
+    faceCanvas.width = img.naturalWidth;
 
     // Draw the image onto the canvas
     faceContext.drawImage(img, 0, 0);
@@ -65,6 +66,17 @@ const onCaptured = (e) => {
   };
 };
 
+const saveImage = () => {
+  const link = document.createElement('a');
+  document.body.appendChild(link); // for Firefox
+  const dataURL = faceCanvas.toDataURL('image/png');
+
+  link.setAttribute('href', dataURL);
+  link.setAttribute('download', `${Date.now()}.jpg`);
+  link.click();
+
+  document.body.removeChild(link);
+};
 const openLiveCamera = () => {
   console.log('live face');
   navigator.mediaDevices.getUserMedia({ video: true })
@@ -82,6 +94,14 @@ const openLiveCamera = () => {
     });
 };
 
+const onBeforeInitialized = () => {
+  console.debug('⌛️before init');
+}
+
+const onInitialized = () => {
+  console.debug('⏳ init');
+}
+
 const onOpened = () => {
   liveFaceCamera.style.display = 'block';
   menuButtons.style.display = 'none';
@@ -92,6 +112,11 @@ const onClosed = () => {
   if (modal.style.display === 'none' && livenessResult.style.display === 'none') {
     menuButtons.style.display = 'flex';
   }
+};
+
+const onUserCanceled = () => {
+  console.log('User canceled the capture');
+  onClosed();
 };
 
 const onFailure = (e) => {
@@ -105,11 +130,16 @@ const onFailure = (e) => {
 
 
 const setupLiveCamera = () => {
+  liveFaceCamera.addEventListener(LiveFaceCamera.BeforeInitializeEventName, onBeforeInitialized);
+  liveFaceCamera.addEventListener(LiveFaceCamera.InitializeEventName, onInitialized);
   liveFaceCamera.addEventListener(LiveFaceCamera.OpenEventName, onOpened);
   liveFaceCamera.addEventListener(LiveFaceCamera.CloseEventName, onClosed);
+  liveFaceCamera.addEventListener(LiveFaceCamera.UserCanceledEventName, onUserCanceled);
   liveFaceCamera.addEventListener(LiveFaceCamera.CaptureEventName, onCaptured);
   liveFaceCamera.addEventListener(LiveFaceCamera.FailureEventName, onFailure);
   liveFaceCaptureButton.addEventListener('click', openLiveCamera);
+  saveButton.addEventListener('click', saveImage);
+
 };
 
 setupLiveCamera();

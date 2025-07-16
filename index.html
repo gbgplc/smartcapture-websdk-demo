@@ -50,7 +50,6 @@
   <div id="menu" class="centerTop" style="display: none;">
     <button id="live-doc-button" class="menuButton">SmartCapture-Document</button>
     <button id="live-face-button" class="menuButton">SmartCapture-Face</button>
-    <button id="sdk-docs-button" class="menuButton" onclick="window.location.href = '/sdk-docs/index.html'">SDK Docs</button>
   </div>
 
   <div id="error-camera" class="errorCamera" style="display: none;">
@@ -75,25 +74,8 @@
       <label for="base64-img">Base64 String</label>
       <textarea id="face-base64-img-input"></textarea>
     </div>
-    <div class="field padding-bottom--24">
-      <label for="face-score">Score</label>
-      <input id="face-score-input" />
-    </div>
-    <div class="field padding-bottom--24">
-      <label for="face-result">Result</label>
-      <input id="face-result-input" />
-    </div>
-    <div class="field padding-bottom--24">
-      <label for="face-error-code">Error Code</label>
-      <input id="face-error-code-input" />
-    </div>
-    <div class="field padding-bottom--24">
-      <label for="face-description">Description</label>
-      <input id="face-error-description-input" />
-    </div>
-    <div class="field padding-bottom--24">
-      <label for="face-transaction-id">Transaction Id</label>
-      <input id="face-transaction-input" />
+    <div class="field padding-bottom--10">
+      <button id="face-save-button" class="menuButton">Save</button>
     </div>
   </div>
   <div id="doc-result" class="formbg padding-horizontal--48" style="display: none;">

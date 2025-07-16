@@ -31,6 +31,11 @@ const onClosed = () => {
   }
 };
 
+const onUserCanceled = () => {
+  console.log('User canceled the capture');
+  onClosed();
+};
+
 const resolveCheckStatus = (status) => {
   if (status == null) {
     return 'N/A';
@@ -148,6 +153,7 @@ const setupDocCamera = () => {
   resetCameraButton.addEventListener('click', resetCamera);
   liveDocumentCamera.addEventListener(LiveDocumentCamera.OpenEventName, onOpened);
   liveDocumentCamera.addEventListener(LiveDocumentCamera.CloseEventName, onClosed);
+  liveDocumentCamera.addEventListener(LiveDocumentCamera.UserCanceledEventName, onUserCanceled);
   liveDocumentCamera.addEventListener(LiveDocumentCamera.FailureEventName, onFailure);
   liveDocumentCamera.addEventListener(LiveDocumentCamera.CaptureEventName, onCaptured);
   loader.style.display = 'none';
