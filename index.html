@@ -42,9 +42,12 @@
   </div>
   <div id="modal" class="modalContainer">
     <div class="modalContent">
-      <button class="close" onClick="hideModal()">✖</button>
-      <p id="modal-text">Failed to launch live camera. Permissions not granted</p>
-      <button id="modal-button" class="accept">Open Manual Camera</button>
+      <button id="modal-close" class="close">✖</button>
+      <p id="modal-text">Something went wrong. Please try again.</p>
+      <div class="modalActions">
+        <button id="modal-back-button" class="secondary">Go Back</button>
+        <button id="modal-try-again" class="accept">Try Again</button>
+      </div>
     </div>
   </div>
   <div id="menu" class="centerTop" style="display: none;">
@@ -71,55 +74,52 @@
   <div id="face-result" class="formbg padding-horizontal--48" style="display: none;">
     <canvas id='face-canvas' class="padding-bottom--24" style="width: 100%;"></canvas>
     <div class="field padding-bottom--24">
-      <label for="base64-img">Base64 String</label>
+      <label for="face-base64-img-input">Base64 String</label>
       <textarea id="face-base64-img-input"></textarea>
     </div>
     <div class="field padding-bottom--10">
       <button id="face-save-button" class="menuButton">Save</button>
     </div>
+    <div class="field padding-bottom--24">
+      <button id="face-close-results-button" class="menuButton">Go Back</button>
+    </div>
   </div>
   <div id="doc-result" class="formbg padding-horizontal--48" style="display: none;">
     <canvas id='doc-canvas' class="padding-bottom--24" style="width: 100%;"></canvas>
     <div class="field padding-bottom--24">
-      <label for="base64-img">Base64 String</label>
+      <label for="base64-img-input">Base64 String</label>
       <textarea id="base64-img-input"></textarea>
     </div>
     <div class="field padding-bottom--24">
-      <label for="doc-is-good">Is good</label>
+      <label for="doc-is-good-input">Is good</label>
       <input id="doc-is-good-input" />
     </div>
     <div class="field padding-bottom--24">
-      <label for="doc-sharpness">Sharpness</label>
+      <label for="doc-sharpness-input">Sharpness</label>
       <input id="doc-sharpness-input" />
     </div>
     <div class="field padding-bottom--24">
-      <label for="doc-glare">Glare free</label>
+      <label for="doc-glare-input">Glare free</label>
       <input id="doc-glare-input" />
     </div>
     <div class="field padding-bottom--24">
-      <label for="doc-dpi">Adequate DPI</label>
+      <label for="doc-dpi-input">Adequate DPI</label>
       <input id="doc-dpi-input" />
     </div>
     <div class="field padding-bottom--24">
-      <label for="doc-failed-checks">Failed checks</label>
+      <label for="doc-failed-checks-input">Failed checks</label>
       <input id="doc-failed-checks-input" />
     </div>
     <div class="field padding-bottom--10">
       <button id="doc-save-button" class="menuButton">Save</button>
     </div>
-    <div class="field padding-bottom--24">
+    <div class="field padding-bottom--10">
       <button id="reset-camera-button" class="menuButton">Capture Back Side</button>
     </div>
+    <div class="field padding-bottom--24">
+      <button id="doc-close-results-button" class="menuButton">Go Back</button>
+    </div>
   </div>
-  <script>
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const hideModal = () => {
-      const modal = document.getElementById('modal');
-      const menu = document.getElementById('menu');
-      modal.style.display = 'none';
-      menu.style.display = 'flex';
-    };
-  </script>
   <script src='/index.js'></script>
 </body>
 </html>
