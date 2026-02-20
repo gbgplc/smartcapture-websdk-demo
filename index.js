@@ -10,10 +10,6 @@ const configure = () => {
   face.src = `${basePath}/src/face.js`
   face.type = 'module';
   document.body.appendChild(face);
-
-  // const credential = document.createElement('script');
-  // credential.src = `${basePath}/Credential.js`;
-  // document.body.appendChild(credential);
 };
 
 configure();

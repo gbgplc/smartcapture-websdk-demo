@@ -1,46 +1,16 @@
 <!doctype html>
 <html lang="en-GB">
 <head>
-  <script>
-    (function (m, a, z, e) {
-      let s;
-      let t;
-      try {
-        t = m.sessionStorage.getItem('maze-us');
-      } catch (err) {
-        // Handle error
-      }
-
-      if (!t) {
-        t = new Date().getTime();
-        try {
-          m.sessionStorage.setItem('maze-us', t);
-        } catch (err) {
-          // Handle error
-        }
-      }
-
-      s = a.createElement('script');
-      s.src = `${z}?apiKey=${e}`;
-      s.async = true;
-      a.getElementsByTagName('head')[0].appendChild(s);
-      m.mazeUniversalSnippetApiKey = e;
-    })(
-      window,
-      document,
-      'https://snippet.maze.co/maze-universal-loader.js',
-      '5e2a7253-697a-42d0-99a8-8b5332c0ae1e'
-    );
-  </script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
   <link rel="stylesheet" href="/styles.css"/>
+  <title>GBG - SmartCapture Demo</title>
 </head>
 <body>
   <div id="spinner" class="centerTop center">
     <span class="loader"></span>
   </div>
-  <div id="modal" class="modalContainer">
+  <div id="modal" class="modalContainer hidden">
     <div class="modalContent">
       <button id="modal-close" class="close">✖</button>
       <p id="modal-text">Something went wrong. Please try again.</p>
@@ -50,29 +20,27 @@
       </div>
     </div>
   </div>
-  <div id="menu" class="centerTop" style="display: none;">
+  <div id="menu" class="centerTop hidden">
     <button id="live-doc-button" class="menuButton">SmartCapture-Document</button>
     <button id="live-face-button" class="menuButton">SmartCapture-Face</button>
   </div>
 
-  <div id="error-camera" class="errorCamera" style="display: none;">
+  <div id="error-camera" class="errorCamera hidden">
     Error: camera permissions denied. Please enable camera permissions on your browser to continue.
   </div>
   <live-face-camera
-    style="display: none"
     id="live-face-camera"
-    environment="development"
   >
   </live-face-camera>
   <div class='centerTop'>
     <live-document-camera
-      class='documentCamera'
+      class='documentCamera hidden'
       id="live-document-camera"
     >
     </live-document-camera>
   </div>
-  <div id="face-result" class="formbg padding-horizontal--48" style="display: none;">
-    <canvas id='face-canvas' class="padding-bottom--24" style="width: 100%;"></canvas>
+  <div id="face-result" class="formbg padding-horizontal--48 hidden">
+    <canvas id='face-canvas' class="padding-bottom--24 canvas-full-width"></canvas>
     <div class="field padding-bottom--24">
       <label for="face-base64-img-input">Base64 String</label>
       <textarea id="face-base64-img-input"></textarea>
@@ -84,8 +52,8 @@
       <button id="face-close-results-button" class="menuButton">Go Back</button>
     </div>
   </div>
-  <div id="doc-result" class="formbg padding-horizontal--48" style="display: none;">
-    <canvas id='doc-canvas' class="padding-bottom--24" style="width: 100%;"></canvas>
+  <div id="doc-result" class="formbg padding-horizontal--48 hidden">
+    <canvas id='doc-canvas' class="padding-bottom--24 canvas-full-width"></canvas>
     <div class="field padding-bottom--24">
       <label for="base64-img-input">Base64 String</label>
       <textarea id="base64-img-input"></textarea>

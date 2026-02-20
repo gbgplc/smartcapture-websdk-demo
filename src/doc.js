@@ -28,19 +28,27 @@ const setUIValues = (id, value) => {
   el.value = value;
 };
 
-const onOpened = () => {
-  menuButtons.style.display = 'none';
+const onOpen = (_) => {
+  console.debug('[SmartCapture LiveDocumentCamera Demo] open received at', new Date().toISOString());
+  menuButtons.classList.add('hidden');
 };
 
-const onClosed = () => {
-  liveDocumentCamera.style.display = 'none';
-  if (modal.style.display === 'none' && documentResult.style.display === 'none') {
-    menuButtons.style.display = 'flex';
+const onDetect = (_) => {
+  console.debug('[SmartCapture LiveDocumentCamera Demo] detect received at', new Date().toISOString());
+};
+
+const onClose = (_) => {
+  console.debug('[SmartCapture LiveDocumentCamera Demo] close received at', new Date().toISOString());
+
+  liveDocumentCamera.classList.add('hidden');
+  if (modal.classList.contains('hidden') && documentResult.classList.contains('hidden')) {
+    menuButtons.classList.remove('hidden');
   }
 };
 
-const onUserCanceled = () => {
-  onClosed();
+const onUserCanceled = (_) => {
+  console.debug('[SmartCapture LiveDocumentCamera Demo] userCanceled received at', new Date().toISOString());
+  onClose();
 };
 
 const resolveCheckStatus = (status) => {
@@ -50,14 +58,15 @@ const resolveCheckStatus = (status) => {
   return (status ? 'OK' : 'Failed');
 };
 
-const onCaptured = (e) => {
+const onCapture = (e) => {
   const { captureResponse } = e.detail;
+  console.debug('[SmartCapture LiveDocumentCamera Demo] capture received at', new Date().toISOString());
+
   let baseStr = 'NA';
-  liveDocumentCamera.style.display = 'none';
-  liveDocumentCamera.isOpen = false;
+  liveDocumentCamera.classList.add('hidden');
 
   if (captureResponse.imageData) {
-    documentResult.style.display = 'block';
+    documentResult.classList.remove('hidden');
 
     const documentContext = documentCanvas.getContext('2d');
     documentCanvas.height = captureResponse.imageHeight;
@@ -70,11 +79,10 @@ const onCaptured = (e) => {
     offScreenCanvas.height = captureResponse.imageHeight;
     offScreenContext.putImageData(captureResponse.imageData, 0, 0);
 
-    const base64Image = offScreenCanvas.toDataURL('image/png');
-    baseStr = base64Image;
+    baseStr = offScreenCanvas.toDataURL('image/png');
     baseStr = baseStr.replace(/^data:image\/png;base64,/, '');
   } else {
-    menuButtons.style.display = 'flex';
+    menuButtons.classList.remove('hidden');
   }
 
   setUIValues('base64-img-input', baseStr);
@@ -89,6 +97,7 @@ const onCaptured = (e) => {
 };
 
 const onFailure = (e) => {
+  console.error('[SmartCapture LiveDocumentCamera Demo] failure received at', new Date().toISOString(), 'error:', e.detail?.error);
   const { error } = e.detail;
 
   if (error.code === 'auto-capture-timeout') {
@@ -106,64 +115,57 @@ const onFailure = (e) => {
   if (modalTryAgainButton) modalTryAgainButton.onclick = restartCamera;
   if (modalClose) modalClose.onclick = goHome;
 
-  menuButtons.style.display = 'none';
-  modal.style.display = 'flex';
+  menuButtons.classList.add('hidden');
+  modal.classList.remove('hidden');
 };
 
 const goHome = () => {
   // Close modal
-  modal.style.display = 'none';
+  modal.classList.add('hidden');
   // Hide results
-  documentResult.style.display = 'none';
+  documentResult.classList.add('hidden');
   const faceResult = document.getElementById('face-result');
-  if (faceResult) faceResult.style.display = 'none';
-  // Hide cameras and ensure they are closed
-  liveDocumentCamera.style.display = 'none';
-  liveDocumentCamera.isOpen = false;
-  const liveFace = document.getElementById('live-face-camera');
-  if (liveFace) {
-    liveFace.style.display = 'none';
-    liveFace.isOpen = false;
-  }
-  // Show menu
-  menuButtons.style.display = 'flex';
+  if (faceResult) faceResult.classList.add('hidden');
+
+  // Show the menu
+  menuButtons.classList.remove('hidden');
 };
 
 const restartCamera = () => {
   // Hide modal and any visible results (both document and face)
-  modal.style.display = 'none';
-  documentResult.style.display = 'none';
+  modal.classList.add('hidden');
+  documentResult.classList.add('hidden');
   const faceResult = document.getElementById('face-result');
-  if (faceResult) faceResult.style.display = 'none';
+  if (faceResult) faceResult.classList.add('hidden');
 
   // Restart the document camera
-  liveDocumentCamera.style.display = 'block';
+  liveDocumentCamera.classList.remove('hidden');
   // Toggle camera to reset internal timeout state without public API
   liveDocumentCamera.isOpen = false;
   // Allow microtask flush
   setTimeout(() => {
-    liveDocumentCamera.style.display = 'block';
+    liveDocumentCamera.classList.remove('hidden');
     liveDocumentCamera.isOpen = true;
   }, 0);
 };
 
 const openLiveCamera = () => {
   // Always hide any visible results when opening the camera
-  documentResult.style.display = 'none';
+  documentResult.classList.add('hidden');
   const faceResult = document.getElementById('face-result');
-  if (faceResult) faceResult.style.display = 'none';
+  if (faceResult) faceResult.classList.add('hidden');
 
   navigator.mediaDevices.getUserMedia({ video: true })
     .then((stream) => {
-      menuButtons.style.display = 'none';
-      liveDocumentCamera.style.display = 'block';
+      menuButtons.classList.add('hidden');
+      liveDocumentCamera.classList.remove('hidden');
       liveDocumentCamera.isOpen = true;
-      errorCamera.style.display = 'none';
+      errorCamera.classList.add('hidden');
       stream.getTracks().forEach(track => track.stop());
     })
     .catch((err) => {
       console.error('[SmartCapture LiveDocumentCamera Demo] error accessing the camera at', new Date().toISOString(), ':', err);
-      errorCamera.style.display = 'flex';
+      errorCamera.classList.remove('hidden');
     });
 };
 
@@ -180,8 +182,8 @@ const saveImage = () => {
 };
 
 const resetCamera = () => {
-  documentResult.style.display = 'none';
-  liveDocumentCamera.style.display = 'block';
+  documentResult.classList.add('hidden');
+  liveDocumentCamera.classList.remove('hidden');
   liveDocumentCamera.isOpen = true;
   if (liveDocumentCamera.showBackOfDocumentAnimation) liveDocumentCamera.showBackOfDocumentAnimation = true;
 };
@@ -210,14 +212,16 @@ const setupDocCamera = () => {
   resetCameraButton.addEventListener('click', resetCamera);
   const docCloseBtn = document.getElementById('doc-close-results-button');
   if (docCloseBtn) docCloseBtn.addEventListener('click', goHome);
-  liveDocumentCamera.addEventListener(LiveDocumentCamera.OpenEventName, onOpened);
-  liveDocumentCamera.addEventListener(LiveDocumentCamera.CloseEventName, onClosed);
+  liveDocumentCamera.addEventListener(LiveDocumentCamera.OpenEventName, onOpen);
+  liveDocumentCamera.addEventListener(LiveDocumentCamera.CaptureEventName, onCapture);
+  liveDocumentCamera.addEventListener(LiveDocumentCamera.DetectEventName, onDetect);
+  liveDocumentCamera.addEventListener(LiveDocumentCamera.CloseEventName, onClose);
   liveDocumentCamera.addEventListener(LiveDocumentCamera.UserCanceledEventName, onUserCanceled);
   liveDocumentCamera.addEventListener(LiveDocumentCamera.FailureEventName, onFailure);
-  liveDocumentCamera.addEventListener(LiveDocumentCamera.CaptureEventName, onCaptured);
-  loader.style.display = 'none';
-  modal.style.display = 'none';
-  menuButtons.style.display = 'flex';
+
+  loader.classList.add('hidden');
+  modal.classList.add('hidden');
+  menuButtons.classList.remove('hidden');
 };
 
 setupDocCamera();

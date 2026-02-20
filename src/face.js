@@ -19,14 +19,12 @@ const setUIValues = (id, value) => {
   el.value = value;
 };
 
-const onCaptured = async (e) => {
-  await new Promise(r => setTimeout(r, 2000));
+const onCapture = async (e) => {
+  console.debug('[SmartCapture LiveFaceCamera Demo] capture received at', new Date().toISOString());
 
   // Hide the menu buttons and show the spinner
-  menuButtons.style.display = 'none';
-  spinner.style.display = 'flex';
-  liveFaceCamera.style.display = 'none';
-  // liveFaceCamera.isOpen = false;
+  menuButtons.classList.add('hidden');
+  spinner.classList.remove('hidden');
 
   const { imageBase64, encryptedFile } = e.detail;
 
@@ -56,18 +54,18 @@ const onCaptured = async (e) => {
     faceContext.drawImage(img, 0, 0);
 
     // Show the result section, and hide the spinner (keep menu hidden for consistency)
-    menuButtons.style.display = 'none';
-    livenessResult.style.display = 'block';
-    spinner.style.display = 'none';
+    menuButtons.classList.add('hidden');
+    livenessResult.classList.remove('hidden');
+    spinner.classList.add('hidden');
   };
 
   // Handle any image loading errors
   img.onerror = () => {
     console.error('[SmartCapture LiveFaceCamera Demo] failed to load the image at', new Date().toISOString());
 
-    menuButtons.style.display = 'flex';
-    livenessResult.style.display = 'none';
-    spinner.style.display = 'none';
+    menuButtons.classList.remove('hidden');
+    livenessResult.classList.add('hidden');
+    spinner.classList.add('hidden');
   };
 };
 
@@ -82,62 +80,77 @@ const saveImage = () => {
 
   document.body.removeChild(link);
 };
+
 const openLiveCamera = () => {
   console.debug('[SmartCapture LiveFaceCamera Demo] opening live face camera at', new Date().toISOString());
 
   // Always hide any visible results when opening the camera
-  livenessResult.style.display = 'none';
+  livenessResult.classList.add('hidden');
   const docResult = document.getElementById('doc-result');
-  if (docResult) docResult.style.display = 'none';
+  if (docResult) docResult.classList.add('hidden');
 
   navigator.mediaDevices.getUserMedia({ video: true })
     .then(async function(stream) {
-      console.log('Camera access granted');
-      livenessResult.style.display = 'none';
+      console.log('[SmartCapture LiveFaceCamera Demo] camera access granted');
+      livenessResult.classList.add('hidden');
 
       liveFaceCamera.isOpen = true;
-      errorCamera.style.display = 'none';
+      errorCamera.classList.add('hidden');
       // Stop the stream after getting permission
       stream.getTracks().forEach(track => track.stop());
     })
     .catch(function(err) {
       console.error('[SmartCapture LiveFaceCamera Demo] error accessing the camera at', new Date().toISOString(), ':', err);
 
-      errorCamera.style.display = 'flex';
+      errorCamera.classList.remove('hidden');
     });
 };
 
-const onBeforeInitialized = () => {
+const onBeforeInitialize = (_) => {
   console.debug('[SmartCapture LiveFaceCamera Demo] beforeInitialize received at', new Date().toISOString());
 }
 
-const onInitialized = () => {
+const onInitialize = (_) => {
   console.debug('[SmartCapture LiveFaceCamera Demo] initialize received at', new Date().toISOString());
 }
 
-const onOpened = () => {
-  console.debug('[SmartCapture LiveFaceCamera Demo] open received at', new Date().toISOString());
-
-  liveFaceCamera.style.display = 'block';
-  menuButtons.style.display = 'none';
+const onBeforeOpen = (_) => {
+  console.debug('[SmartCapture LiveFaceCamera Demo] beforeOpen received at', new Date().toISOString());
 };
 
-const onClosed = () => {
-  console.debug('[LiveFaceCamera] close received at', new Date().toISOString());
+const onOpen = (_) => {
+  console.debug('[SmartCapture LiveFaceCamera Demo] open received at', new Date().toISOString());
 
-  liveFaceCamera.style.display = 'none';
-  if (modal.style.display === 'none' && livenessResult.style.display === 'none') {
-    menuButtons.style.display = 'flex';
+  // Component manages its own visibility
+  menuButtons.classList.add('hidden');
+};
+
+const onDetect = (_) => {
+  console.debug('[SmartCapture LiveFaceCamera Demo] detect received at', new Date().toISOString());
+};
+
+const onBeforeCapture = (_) => {
+  console.debug('[SmartCapture LiveFaceCamera Demo] beforeCapture received at', new Date().toISOString());
+};
+
+const onClose = (_) => {
+  console.debug('[SmartCapture LiveFaceCamera Demo] close received at', new Date().toISOString());
+
+  if (modal.classList.contains('hidden') && livenessResult.classList.contains('hidden')) {
+    menuButtons.classList.remove('hidden');
   }
 };
 
-const onUserCanceled = () => {
-  console.debug('[SmartCapture LiveFaceCamera Demo] user canceled the capture at', new Date().toISOString());
-  onClosed();
+const onUserCanceled = (_) => {
+  console.debug('[SmartCapture LiveFaceCamera Demo] userCanceled received at', new Date().toISOString());
+
+  if (modal.classList.contains('hidden') && livenessResult.classList.contains('hidden')) {
+    menuButtons.classList.remove('hidden');
+  }
 };
 
 const onFailure = (e) => {
-  console.error('[SmartCapture LiveFaceCamera Demo] onFailure at', new Date().toISOString(), ':', e);
+  console.error('[SmartCapture LiveFaceCamera Demo] failure received at', new Date().toISOString(), 'error:', e.detail?.error);
 
   const { error } = e.detail;
 
@@ -152,8 +165,8 @@ const onFailure = (e) => {
     modalText.textContent = `An error occurred: ${error.message}`;
   }
 
-  menuButtons.style.display = 'none';
-  modal.style.display = 'flex';
+  menuButtons.classList.add('hidden');
+  modal.classList.remove('hidden');
   // Wire modal actions: Back → goHome, Try again → restartFaceCamera, X → goHome
   if (modalBackButton) modalBackButton.onclick = goHome;
   if (modalTryAgainButton) modalTryAgainButton.onclick = restartFaceCamera;
@@ -162,48 +175,43 @@ const onFailure = (e) => {
 
 const goHome = () => {
   // Close modal
-  modal.style.display = 'none';
+  modal.classList.add('hidden');
   // Hide results
-  livenessResult.style.display = 'none';
+  livenessResult.classList.add('hidden');
   const docResult = document.getElementById('doc-result');
-  if (docResult) docResult.style.display = 'none';
-  // Hide cameras and ensure they are closed
-  liveFaceCamera.style.display = 'none';
-  liveFaceCamera.isOpen = false;
-  const liveDoc = document.getElementById('live-document-camera');
-  if (liveDoc) {
-    liveDoc.style.display = 'none';
-    liveDoc.isOpen = false;
-  }
-  // Show menu
-  menuButtons.style.display = 'flex';
+  if (docResult) docResult.classList.add('hidden');
+
+  // Show the menu
+  menuButtons.classList.remove('hidden');
 };
 
 const restartFaceCamera = () => {
   // Hide modal and any visible results (both face and document)
-  modal.style.display = 'none';
-  livenessResult.style.display = 'none';
+  modal.classList.add('hidden');
+  livenessResult.classList.add('hidden');
   const docResult = document.getElementById('doc-result');
-  if (docResult) docResult.style.display = 'none';
+  if (docResult) docResult.classList.add('hidden');
 
-  // Restart the face camera
-  liveFaceCamera.style.display = 'block';
-  // Toggle camera to reset internal state
-  liveFaceCamera.isOpen = false;
-  setTimeout(() => {
-    liveFaceCamera.style.display = 'block';
-    liveFaceCamera.isOpen = true;
-  }, 0);
+  // Restart the face camera using public API
+  liveFaceCamera.isOpen = true;
 };
 
 const setupLiveCamera = async () => {
-  liveFaceCamera.addEventListener(LiveFaceCamera.BeforeInitializeEventName, onBeforeInitialized);
-  liveFaceCamera.addEventListener(LiveFaceCamera.InitializeEventName, onInitialized);
-  liveFaceCamera.addEventListener(LiveFaceCamera.OpenEventName, onOpened);
-  liveFaceCamera.addEventListener(LiveFaceCamera.CloseEventName, onClosed);
+  liveFaceCamera.addEventListener(LiveFaceCamera.BeforeInitializeEventName, onBeforeInitialize);
+  liveFaceCamera.addEventListener(LiveFaceCamera.InitializeEventName, onInitialize);
+
+  liveFaceCamera.addEventListener(LiveFaceCamera.BeforeOpenEventName, onBeforeOpen);
+  liveFaceCamera.addEventListener(LiveFaceCamera.OpenEventName, onOpen);
+
+  liveFaceCamera.addEventListener(LiveFaceCamera.DetectEventName, onDetect);
+
+  liveFaceCamera.addEventListener(LiveFaceCamera.BeforeCaptureEventName, onBeforeCapture);
+  liveFaceCamera.addEventListener(LiveFaceCamera.CaptureEventName, onCapture);
+
+  liveFaceCamera.addEventListener(LiveFaceCamera.CloseEventName, onClose);
   liveFaceCamera.addEventListener(LiveFaceCamera.UserCanceledEventName, onUserCanceled);
-  liveFaceCamera.addEventListener(LiveFaceCamera.CaptureEventName, onCaptured);
   liveFaceCamera.addEventListener(LiveFaceCamera.FailureEventName, onFailure);
+
   liveFaceCaptureButton.addEventListener('click', openLiveCamera);
   saveButton.addEventListener('click', saveImage);
   const faceCloseBtn = document.getElementById('face-close-results-button');
