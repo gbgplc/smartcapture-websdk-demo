@@ -11,6 +11,7 @@
     "start": "npm run build && wds --config wds.config.js"
   },
   "dependencies": {
+    "piexifjs": "^1.0.6"
   },
   "devDependencies": {
     "@rollup/plugin-babel": "^6.0.4",

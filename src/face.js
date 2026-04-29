@@ -72,7 +72,7 @@ const onCapture = async (e) => {
 const saveImage = () => {
   const link = document.createElement('a');
   document.body.appendChild(link); // for Firefox
-  const dataURL = faceCanvas.toDataURL('image/png');
+  const dataURL = faceCanvas.toDataURL('image/jpeg', 0.92);
 
   link.setAttribute('href', dataURL);
   link.setAttribute('download', `${Date.now()}.jpg`);

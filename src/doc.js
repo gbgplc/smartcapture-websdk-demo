@@ -13,6 +13,8 @@ const modalClose = document.getElementById('modal-close');
 const documentResult = document.getElementById('doc-result');
 const documentCanvas = document.getElementById('doc-canvas');
 const saveButton = document.getElementById('doc-save-button');
+
+let capturedImageBase64 = null;
 const resetCameraButton = document.getElementById('reset-camera-button');
 
 // Configure timeout for auto-capture
@@ -62,8 +64,12 @@ const onCapture = (e) => {
   const { captureResponse } = e.detail;
   console.debug('[SmartCapture LiveDocumentCamera Demo] capture received at', new Date().toISOString());
 
-  let baseStr = 'NA';
   liveDocumentCamera.classList.add('hidden');
+
+  capturedImageBase64 = captureResponse.imageBase64 ?? null;
+  const baseStr = capturedImageBase64
+    ? capturedImageBase64.replace(/^data:image\/\w+;base64,/, '')
+    : 'NA';
 
   if (captureResponse.imageData) {
     documentResult.classList.remove('hidden');
@@ -72,15 +78,6 @@ const onCapture = (e) => {
     documentCanvas.height = captureResponse.imageHeight;
     documentCanvas.width = captureResponse.imageWidth;
     documentContext.putImageData(captureResponse.imageData, 0, 0);
-
-    const offScreenCanvas = document.createElement('canvas');
-    const offScreenContext = offScreenCanvas.getContext('2d');
-    offScreenCanvas.width = captureResponse.imageWidth;
-    offScreenCanvas.height = captureResponse.imageHeight;
-    offScreenContext.putImageData(captureResponse.imageData, 0, 0);
-
-    baseStr = offScreenCanvas.toDataURL('image/png');
-    baseStr = baseStr.replace(/^data:image\/png;base64,/, '');
   } else {
     menuButtons.classList.remove('hidden');
   }
@@ -170,11 +167,12 @@ const openLiveCamera = () => {
 };
 
 const saveImage = () => {
+  if (!capturedImageBase64) return;
+
   const link = document.createElement('a');
   document.body.appendChild(link);
-  const dataURL = documentCanvas.toDataURL('image/png');
 
-  link.setAttribute('href', dataURL);
+  link.setAttribute('href', capturedImageBase64);
   link.setAttribute('download', `${Date.now()}.jpg`);
   link.click();
 
