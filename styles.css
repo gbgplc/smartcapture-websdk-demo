@@ -1,10 +1,17 @@
 * {
-  font-family: "Haas Grot Text R Web", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family:
+    'Haas Grot Text R Web', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
 }
 
 body {
   background: #fafafa;
+  margin: 0;
+  min-height: 100dvh;
 }
 
 .centerTop {
@@ -16,16 +23,16 @@ body {
 }
 
 .center {
-  margin: 20% auto 0 auto
+  margin: 20% auto 0 auto;
 }
-.errorCamera{
+.errorCamera {
   border-radius: 8px;
   padding: 10px 16px;
-  background-color: #e15023;
+  background-color: #c43f1f;
   display: flex;
   text-align: center;
   justify-content: center;
-  color: #FFFFFF;
+  color: #ffffff;
   text-shadow: 1px 1px #00000053;
   width: 380px;
   margin: 0 auto;
@@ -35,14 +42,15 @@ body {
 .menuButton {
   width: 100%;
   max-width: 380px;
-  background-color: #271E2C;
+  background-color: #271e2c;
   border-radius: 8px;
   border-style: none;
   box-sizing: border-box;
-  color: #FFFFFF;
+  color: #ffffff;
   cursor: pointer;
   display: inline-block;
-  font-family: "Haas Grot Text R Web", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family:
+    'Haas Grot Text R Web', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   font-size: 14px;
   font-weight: 500;
   height: 40px;
@@ -80,11 +88,14 @@ body {
   max-width: 448px;
   background: white;
   border-radius: 4px;
-  box-shadow: rgba(60, 66, 87, 0.12) 0 7px 14px 0, rgba(0, 0, 0, 0.12) 0 3px 6px 0;
+  box-shadow:
+    rgba(60, 66, 87, 0.12) 0 7px 14px 0,
+    rgba(0, 0, 0, 0.12) 0 3px 6px 0;
 }
 
 .field input {
-  font-family: "Haas Grot Text R Web", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family:
+    'Haas Grot Text R Web', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   font-size: 16px;
   line-height: 28px;
   width: 100%;
@@ -96,7 +107,8 @@ body {
 
 textarea {
   resize: none;
-  font-family: "Haas Grot Text R Web", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family:
+    'Haas Grot Text R Web', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   font-size: 16px;
   line-height: 28px;
   width: 100%;
@@ -138,13 +150,21 @@ textarea {
 }
 
 @keyframes rotation {
-  0% { transform: rotate(0deg) }
-  100% { transform: rotate(360deg)}
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 @-webkit-keyframes rotation {
-  0% { -webkit-transform: rotate(0deg);}
-  100% { -webkit-transform: rotate(360deg);}
+  0% {
+    -webkit-transform: rotate(0deg);
+  }
+  100% {
+    -webkit-transform: rotate(360deg);
+  }
 }
 
 .modalContainer {
@@ -194,7 +214,8 @@ p {
   font-size: 14px;
 }
 
-button.accept, button.secondary {
+button.accept,
+button.secondary {
   background-color: #271e2cd5;
   border: none;
   border-radius: 5px;
@@ -214,13 +235,24 @@ button.secondary {
   display: none !important;
 }
 
-.documentCamera {
+.documentCameraShell {
+  align-items: stretch;
+  margin-bottom: 0;
   width: 100%;
-  height: 100%;
+}
 
-  @media(min-width: 844px) {
-    width: 50%;
-  }
+.documentCameraShellActive {
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.documentCamera {
+  align-self: center;
+  height: 100%;
+  max-height: 100%;
+  width: min(100%, 1100px);
 }
 
 .canvas-full-width {
