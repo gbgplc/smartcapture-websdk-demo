@@ -1,107 +1,132 @@
 <!doctype html>
 <html lang="en-GB">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <link rel="stylesheet" href="/styles.css" />
-    <title>GBG - SmartCapture Demo</title>
-  </head>
-  <body>
-    <div id="spinner" class="centerTop center">
-      <span class="loader"></span>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+  <link rel="preload" href="/assets/fonts/DMSans/DMSans-regular.ttf" crossorigin="anonymous" as="font" type="font/ttf"/>
+  <link rel="preload" href="/assets/fonts/MintGrotesk/MintGrotesk-Bold.otf" crossorigin="anonymous" as="font" type="font/otf"/>
+  <link rel="preload" href="/assets/fonts/MintGroteskDisplay/MintGroteskDisplay-ExtraBold.otf" crossorigin="anonymous" as="font" type="font/otf"/>
+  <link rel="icon" type="image/png" href="/assets/favicon.png"/>
+  <link rel="stylesheet" href="/styles.css"/>
+  <title>GBG | SmartCapture Standalone Demo</title>
+</head>
+<body>
+  <div id="spinner" class="centerTop center">
+    <span class="loader"></span>
+  </div>
+  <div id="modal" class="modalContainer hidden">
+    <div class="modalContent">
+      <button id="modal-close" class="close">✖</button>
+      <p id="modal-text">Something went wrong. Please try again.</p>
+      <div class="modalActions">
+        <button id="modal-back-button" class="secondary">Go Back</button>
+        <button id="modal-try-again" class="accept">Try Again</button>
+      </div>
     </div>
-    <div id="modal" class="modalContainer hidden">
-      <div class="modalContent">
-        <button id="modal-close" class="close">✖</button>
-        <p id="modal-text">Something went wrong. Please try again.</p>
-        <div class="modalActions">
-          <button id="modal-back-button" class="secondary">Go Back</button>
-          <button id="modal-try-again" class="accept">Try Again</button>
+  </div>
+<div id="menu" class="homeShell hidden">
+    <div class="homeHeader">
+      <div class="homeLogoWrap">
+        <img
+          id="home-logo"
+          class="homeLogo"
+          src="/assets/GBG-logo-primary.svg"
+          alt="GBG logo"
+        />
+      </div>
+    </div>
+    <div class="homeHero">
+      <p class="homeEyebrow">SmartCapture Demo</p>
+      <h1>Choose a capture experience to launch</h1>
+      <p class="homeDescription">Launch SmartCapture Document or Face cameras in standalone mode for testing and validation</p>
+      <div class="homeCards">
+        <div class="homeCard">
+          <div class="homeCardIllustration">
+            <img src="/assets/document-scan.png" alt="Document camera illustration" />
+          </div>
+          <p class="homeCardDesc">Capture Identity Documents using the SmartCapture Document camera</p>
+          <button id="live-doc-button" class="menuButton menuButton--primary">Launch SmartCapture Document camera</button>
+        </div>
+        <div class="homeCard">
+          <div class="homeCardIllustration">
+            <img src="/assets/facematch.png" alt="Face camera illustration" />
+          </div>
+          <p class="homeCardDesc">Capture selfies using the SmartCapture Face camera</p>
+          <button id="live-face-button" class="menuButton menuButton--primary">Launch SmartCapture Face camera</button>
         </div>
       </div>
     </div>
-    <div id="menu" class="centerTop hidden">
-      <button id="live-doc-button" class="menuButton">
-        SmartCapture-Document
-      </button>
-      <button id="live-face-button" class="menuButton">
-        SmartCapture-Face
-      </button>
+    <div class="homeFooter">
+      <p>Copyright © 2026 GB Group plc. All rights reserved.</p>
+      <div class="homeFooterLinks">
+        <a href="https://www.gbg.com/en/privacy-policy/" target="_blank" rel="noopener noreferrer">Privacy</a>
+      </div>
     </div>
+  </div>
 
-    <div id="error-camera" class="errorCamera hidden">
-      Error: camera permissions denied. Please enable camera permissions on your
-      browser to continue.
+  <div id="error-camera" class="errorCamera hidden">
+    Error: camera permissions denied. Please enable camera permissions on your browser to continue.
+  </div>
+  <live-face-camera
+    id="live-face-camera"
+  >
+  </live-face-camera>
+  <div class="centerTop documentCameraShell">
+    <live-document-camera
+      class='documentCamera hidden'
+      id="live-document-camera"
+    >
+    </live-document-camera>
+  </div>
+  <div id="face-result" class="formbg padding-horizontal--48 hidden">
+    <canvas id='face-canvas' class="padding-bottom--24 canvas-full-width"></canvas>
+    <div class="field padding-bottom--24">
+      <label for="face-base64-img-input">Base64 String</label>
+      <textarea id="face-base64-img-input"></textarea>
     </div>
-    <live-face-camera id="live-face-camera"> </live-face-camera>
-    <div class="centerTop documentCameraShell">
-      <live-document-camera
-        class="documentCamera hidden"
-        id="live-document-camera"
-      >
-      </live-document-camera>
+    <div class="field padding-bottom--10">
+      <button id="face-save-button" class="menuButton menuButton--primary">Save</button>
     </div>
-    <div id="face-result" class="formbg padding-horizontal--48 hidden">
-      <canvas
-        id="face-canvas"
-        class="padding-bottom--24 canvas-full-width"
-      ></canvas>
-      <div class="field padding-bottom--24">
-        <label for="face-base64-img-input">Base64 String</label>
-        <textarea id="face-base64-img-input"></textarea>
-      </div>
-      <div class="field padding-bottom--10">
-        <button id="face-save-button" class="menuButton">Save</button>
-      </div>
-      <div class="field padding-bottom--24">
-        <button id="face-close-results-button" class="menuButton">
-          Go Back
-        </button>
-      </div>
+    <div class="field padding-bottom--24">
+      <button id="face-close-results-button" class="menuButton menuButton--primary">Go Back</button>
     </div>
-    <div id="doc-result" class="formbg padding-horizontal--48 hidden">
-      <canvas
-        id="doc-canvas"
-        class="padding-bottom--24 canvas-full-width"
-      ></canvas>
-      <div class="field padding-bottom--24">
-        <label for="base64-img-input">Base64 String</label>
-        <textarea id="base64-img-input"></textarea>
-      </div>
-      <div class="field padding-bottom--24">
-        <label for="doc-is-good-input">Is good</label>
-        <input id="doc-is-good-input" />
-      </div>
-      <div class="field padding-bottom--24">
-        <label for="doc-sharpness-input">Sharpness</label>
-        <input id="doc-sharpness-input" />
-      </div>
-      <div class="field padding-bottom--24">
-        <label for="doc-glare-input">Glare free</label>
-        <input id="doc-glare-input" />
-      </div>
-      <div class="field padding-bottom--24">
-        <label for="doc-dpi-input">Adequate DPI</label>
-        <input id="doc-dpi-input" />
-      </div>
-      <div class="field padding-bottom--24">
-        <label for="doc-failed-checks-input">Failed checks</label>
-        <input id="doc-failed-checks-input" />
-      </div>
-      <div class="field padding-bottom--10">
-        <button id="doc-save-button" class="menuButton">Save</button>
-      </div>
-      <div class="field padding-bottom--10">
-        <button id="reset-camera-button" class="menuButton">
-          Capture Back Side
-        </button>
-      </div>
-      <div class="field padding-bottom--24">
-        <button id="doc-close-results-button" class="menuButton">
-          Go Back
-        </button>
-      </div>
+  </div>
+  <div id="doc-result" class="formbg padding-horizontal--48 hidden">
+    <canvas id='doc-canvas' class="padding-bottom--24 canvas-full-width"></canvas>
+    <div class="field padding-bottom--24">
+      <label for="base64-img-input">Base64 String</label>
+      <textarea id="base64-img-input"></textarea>
     </div>
-    <script src="/index.js"></script>
-  </body>
+    <div class="field padding-bottom--24">
+      <label for="doc-is-good-input">Is good</label>
+      <input id="doc-is-good-input" />
+    </div>
+    <div class="field padding-bottom--24">
+      <label for="doc-sharpness-input">Sharpness</label>
+      <input id="doc-sharpness-input" />
+    </div>
+    <div class="field padding-bottom--24">
+      <label for="doc-glare-input">Glare free</label>
+      <input id="doc-glare-input" />
+    </div>
+    <div class="field padding-bottom--24">
+      <label for="doc-dpi-input">Adequate DPI</label>
+      <input id="doc-dpi-input" />
+    </div>
+    <div class="field padding-bottom--24">
+      <label for="doc-failed-checks-input">Failed checks</label>
+      <input id="doc-failed-checks-input" />
+    </div>
+    <div class="field padding-bottom--10">
+      <button id="doc-save-button" class="menuButton menuButton--primary">Save</button>
+    </div>
+    <div class="field padding-bottom--10">
+      <button id="reset-camera-button" class="menuButton menuButton--primary">Capture Back Side</button>
+    </div>
+<div class="field padding-bottom--24">
+      <button id="doc-close-results-button" class="menuButton menuButton--primary">Go Back</button>
+    </div>
+  </div>
+  <script src='/index.js'></script>
+</body>
 </html>
