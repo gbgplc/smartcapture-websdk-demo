@@ -14,9 +14,31 @@ const errorCamera = document.getElementById('error-camera');
 const faceCanvas = document.getElementById('face-canvas');
 const saveButton = document.getElementById('face-save-button');
 
-const setUIValues = (id, value) => {
+// Rendering the full ~1MB base64 string into the textarea costs iOS Safari
+// ~4s of layout, which blocked the whole transition into this results view
+// (same issue measured on the document capture results view). Show a short
+// summary instead and only inject the full string when the user actually
+// asks for it, so they can still select/copy it on demand.
+const BASE64_PREVIEW_CHARS = 120;
+let pendingBase64 = null;
+
+const setBase64Field = (id, base64) => {
   const el = document.getElementById(id);
-  el.value = value;
+  if (!base64 || base64 === 'NA') {
+    pendingBase64 = null;
+    el.value = base64 || 'NA';
+    return;
+  }
+
+  pendingBase64 = base64;
+  const sizeKb = (base64.length / 1024).toFixed(0);
+  el.value = `${base64.slice(0, BASE64_PREVIEW_CHARS)}… [${sizeKb}KB truncated — tap here to load the full string]`;
+};
+
+const loadFullBase64 = event => {
+  if (!pendingBase64) return;
+  event.target.value = pendingBase64;
+  pendingBase64 = null;
 };
 
 const onCapture = async (e) => {
@@ -36,7 +58,7 @@ const onCapture = async (e) => {
   reader.readAsDataURL(encryptedFile);
   reader.onloadend = () => {
     const base64Data = reader.result;
-    setUIValues('face-base64-img-input', base64Data.replace(/^data:application\/octet-stream;base64,/, ''));
+    setBase64Field('face-base64-img-input', base64Data.replace(/^data:application\/octet-stream;base64,/, ''));
   };
 
   // Create a new Image element
@@ -158,7 +180,7 @@ const onFailure = (e) => {
   if (error.code === 4) {
     modalText.textContent = 'Face auto-capture timed out. Please try again and ensure your face is properly positioned within the frame.';
   } else if (error.code === 3) {
-    modalText.textContent = 'Camera initialization timed out. Please check your camera permissions and try again.';
+    modalText.textContent = 'The face camera did not finish starting up. Please try again, or try a different browser on this device.';
   } else if (error.code === 1) {
     modalText.textContent = 'Camera permission denied. Please grant camera access and try again.';
   } else {
@@ -197,6 +219,8 @@ const restartFaceCamera = () => {
 };
 
 const setupLiveCamera = async () => {
+  liveFaceCamera.showPreviewScreen = true; // Opt-in: false by default (see docs/web/face-camera.md)
+
   liveFaceCamera.addEventListener(LiveFaceCamera.BeforeInitializeEventName, onBeforeInitialize);
   liveFaceCamera.addEventListener(LiveFaceCamera.InitializeEventName, onInitialize);
 
@@ -216,6 +240,8 @@ const setupLiveCamera = async () => {
   saveButton.addEventListener('click', saveImage);
   const faceCloseBtn = document.getElementById('face-close-results-button');
   if (faceCloseBtn) faceCloseBtn.addEventListener('click', goHome);
+  const base64Field = document.getElementById('face-base64-img-input');
+  if (base64Field) base64Field.addEventListener('focus', loadFullBase64);
 };
 
 await setupLiveCamera();

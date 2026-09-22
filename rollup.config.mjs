@@ -1,24 +1,29 @@
-import resolve from '@rollup/plugin-node-resolve'; // Plugin to resolve modules in node_modules
-import commonjs from '@rollup/plugin-commonjs'; // Plugin to convert CommonJS modules to ES6
-import { babel } from '@rollup/plugin-babel'; // Plugin to transpile ES6+ code using Babel
-import terser from '@rollup/plugin-terser'; // Plugin to minify the output bundle
+import resolve from '@rollup/plugin-node-resolve';
+import commonjs from '@rollup/plugin-commonjs';
+import { babel } from '@rollup/plugin-babel';
+import terser from '@rollup/plugin-terser';
+import { readFileSync } from 'node:fs';
+
+const sdkPkg = JSON.parse(readFileSync(new URL('./node_modules/@gbgplc/smartcapture-web/package.json', import.meta.url)));
+const sdkVersion = sdkPkg.version;
 
 export default {
-    input: 'index.js', // Entry point of your application
+    input: 'index.js',
     output: {
-        file: 'dist/bundle.js', // Output file and location
-        format: 'iife', // Output format: IIFE (Immediately Invoked Function Expression) for browser compatibility
-        name: 'SmartcaptureWebsdkDemo', // Global variable name for the IIFE
-        sourcemap: true // Enable source maps in Rollup
+        file: 'dist/bundle.js',
+        format: 'iife',
+        name: 'SmartcaptureWebsdkDemo',
+        sourcemap: true,
+        banner: `window.__SDK_VERSION__ = ${JSON.stringify(sdkVersion)};`,
     },
     plugins: [
-        resolve(), // Resolves modules from node_modules
-        commonjs(), // Converts CommonJS modules to ES6
+        resolve(),
+        commonjs(),
         babel({
-            babelHelpers: 'bundled', // Uses bundled Babel helpers instead of including them in every file
-            exclude: 'node_modules/**' // Excludes node_modules from Babel transpilation
+            babelHelpers: 'bundled',
+            exclude: 'node_modules/**',
         }),
-        terser() // Minifies the output for better performance
+        terser(),
     ],
     external: []
 };

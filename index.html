@@ -2,10 +2,8 @@
 <html lang="en-GB">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <link rel="preload" href="/assets/fonts/DMSans/DMSans-regular.ttf" crossorigin="anonymous" as="font" type="font/ttf"/>
-  <link rel="preload" href="/assets/fonts/MintGrotesk/MintGrotesk-Bold.otf" crossorigin="anonymous" as="font" type="font/otf"/>
-  <link rel="preload" href="/assets/fonts/MintGroteskDisplay/MintGroteskDisplay-ExtraBold.otf" crossorigin="anonymous" as="font" type="font/otf"/>
   <link rel="icon" type="image/png" href="/assets/favicon.png"/>
   <link rel="stylesheet" href="/styles.css"/>
   <title>GBG | SmartCapture Standalone Demo</title>
@@ -24,6 +22,29 @@
       </div>
     </div>
   </div>
+  <div id="iad-modal" class="modalContainer hidden">
+    <div class="modalContent iadModalContent">
+      <div class="iadModalHeader">
+        <p class="iadModalTitle">Injection Attack Detection Signals</p>
+        <div class="iadHeaderActions">
+          <button id="iad-copy-json-button" class="iadIconButton" type="button" title="Copy JSON" aria-label="Copy JSON">
+            <svg class="iadIconCopy" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <svg class="iadIconCheck" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </button>
+          <button id="iad-download-json-button" class="iadIconButton" type="button" title="Download JSON" aria-label="Download JSON">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          </button>
+          <button id="iad-modal-close" class="iadIconButton" type="button" title="Close" aria-label="Close">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+      </div>
+      <div id="iad-signals-view" class="iadSignalsView"></div>
+      <div class="field padding-bottom--24 hidden" id="iad-signals-raw-container">
+        <textarea id="iad-signals-textarea" rows="12" readonly></textarea>
+      </div>
+    </div>
+  </div>
 <div id="menu" class="homeShell hidden">
     <div class="homeHeader">
       <div class="homeLogoWrap">
@@ -36,7 +57,7 @@
       </div>
     </div>
     <div class="homeHero">
-      <p class="homeEyebrow">SmartCapture Demo</p>
+      <p class="homeEyebrow" id="version-pill">SmartCapture – Latest</p>
       <h1>Choose a capture experience to launch</h1>
       <p class="homeDescription">Launch SmartCapture Document or Face cameras in standalone mode for testing and validation</p>
       <div class="homeCards">
@@ -59,6 +80,8 @@
     <div class="homeFooter">
       <p>Copyright © 2026 GB Group plc. All rights reserved.</p>
       <div class="homeFooterLinks">
+        <a href="https://smartcapture-docs.idscan.cloud/docs/web/intro/" target="_blank" rel="noopener noreferrer">Documentation</a>
+        <a href="https://github.com/gbgplc/smartcapture-websdk-demo" target="_blank" rel="noopener noreferrer">GitHub</a>
         <a href="https://www.gbg.com/en/privacy-policy/" target="_blank" rel="noopener noreferrer">Privacy</a>
       </div>
     </div>
@@ -67,14 +90,11 @@
   <div id="error-camera" class="errorCamera hidden">
     Error: camera permissions denied. Please enable camera permissions on your browser to continue.
   </div>
-  <live-face-camera
-    id="live-face-camera"
-  >
-  </live-face-camera>
   <div class="centerTop documentCameraShell">
     <live-document-camera
       class='documentCamera hidden'
       id="live-document-camera"
+      data-samsung-a53-acquisition-test
     >
     </live-document-camera>
   </div>
@@ -123,10 +143,14 @@
     <div class="field padding-bottom--10">
       <button id="reset-camera-button" class="menuButton menuButton--primary">Capture Back Side</button>
     </div>
+    <div class="field padding-bottom--10">
+      <button id="doc-inspect-signals-button" class="menuButton menuButton--primary">Inspect IAD Signals</button>
+    </div>
 <div class="field padding-bottom--24">
       <button id="doc-close-results-button" class="menuButton menuButton--primary">Go Back</button>
     </div>
   </div>
+  <script src='/version.js'></script>
   <script src='/index.js'></script>
 </body>
 </html>
