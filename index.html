@@ -23,9 +23,9 @@
     </div>
   </div>
   <div id="iad-modal" class="modalContainer hidden">
-    <div class="modalContent iadModalContent">
+    <div class="modalContent iadModalContent" role="dialog" aria-modal="true" aria-labelledby="iad-modal-title">
       <div class="iadModalHeader">
-        <p class="iadModalTitle">Injection Attack Detection Signals</p>
+        <p class="iadModalTitle" id="iad-modal-title">Injection Attack Detection Signals</p>
         <div class="iadHeaderActions">
           <button id="iad-copy-json-button" class="iadIconButton" type="button" title="Copy JSON" aria-label="Copy JSON">
             <svg class="iadIconCopy" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
@@ -40,8 +40,188 @@
         </div>
       </div>
       <div id="iad-signals-view" class="iadSignalsView"></div>
-      <div class="field padding-bottom--24 hidden" id="iad-signals-raw-container">
-        <textarea id="iad-signals-textarea" rows="12" readonly></textarea>
+    </div>
+  </div>
+  <div id="doc-config-modal" class="modalContainer hidden">
+    <div class="modalContent docConfigModalContent" role="dialog" aria-modal="true" aria-labelledby="doc-config-title">
+      <div class="iadModalHeader">
+        <p class="iadModalTitle" id="doc-config-title">Document camera configuration</p>
+        <div class="iadHeaderActions">
+          <button id="doc-config-close" class="iadIconButton" type="button" title="Close" aria-label="Close">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+      </div>
+      <p class="configIntro">Adjust the SmartCapture Document settings below, then launch the camera. Anything left untouched uses the SDK default.</p>
+
+      <div class="configGroups">
+        <section class="configGroup">
+          <h2 class="configGroupTitle">Camera screen</h2>
+          <div class="configGroupBody">
+            <div class="configRow">
+              <div class="configRowText">
+                <label class="configLabel" for="cfg-show-back-button">Show back button</label>
+                <p class="configHint">By disabling the show back button setting, the back button will not be shown on the document camera screen. <span class="configDefault">Default: enabled</span></p>
+              </div>
+              <div class="configRowControl">
+                <label class="configSwitch">
+                  <input type="checkbox" id="cfg-show-back-button" checked/>
+                  <span class="configSwitchTrack" aria-hidden="true"></span>
+                </label>
+              </div>
+            </div>
+            <div class="configRow">
+              <div class="configRowText">
+                <label class="configLabel" for="cfg-hide-help-icon">Hide help icon</label>
+                <p class="configHint">By enabling the hide help icon setting, the help icon will not appear on the document camera. <span class="configDefault">Default: disabled</span></p>
+              </div>
+              <div class="configRowControl">
+                <label class="configSwitch">
+                  <input type="checkbox" id="cfg-hide-help-icon"/>
+                  <span class="configSwitchTrack" aria-hidden="true"></span>
+                </label>
+              </div>
+            </div>
+            <div class="configRow">
+              <div class="configRowText">
+                <label class="configLabel" for="cfg-show-preview-screen">Show preview screen</label>
+                <p class="configHint">By enabling the show preview screen setting, the user reviews the captured image on a review/retake screen before it is returned. Note this changes when the capture and close events fire. <span class="configDefault">Default: disabled</span></p>
+              </div>
+              <div class="configRowControl">
+                <label class="configSwitch">
+                  <input type="checkbox" id="cfg-show-preview-screen"/>
+                  <span class="configSwitchTrack" aria-hidden="true"></span>
+                </label>
+              </div>
+            </div>
+            <div class="configRow">
+              <div class="configRowText">
+                <label class="configLabel" for="cfg-success-time">Success overlay duration</label>
+                <p class="configHint">The amount of seconds entered will reflect how long the "photo taken" overlay is shown before the preview screen appears. <span class="configDefault">Default: 1.5 seconds</span></p>
+              </div>
+              <div class="configRowControl">
+                <input type="number" id="cfg-success-time" class="configNumber" min="0" max="10" step="0.1" value="1.5" required/>
+                <span class="configUnit">sec</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="configGroup">
+          <h2 class="configGroupTitle">Capture mode</h2>
+          <div class="configGroupBody">
+            <p class="configGroupNote">
+              Enabling both auto-capture and tap to capture, the document camera will initialise with auto-capture running, and after the auto-capture delay toggle time is met, the auto-capture toggle will appear.
+              Enabling auto-capture and disabling tap to capture, the document camera will only have the option for auto-capture.
+              Disabling auto-capture and enabling tap to capture, the document camera will initialise straight into the tap to capture mode, with the ability to switch to auto-capture.
+            </p>
+            <div class="configRow">
+              <div class="configRowText">
+                <label class="configLabel" for="cfg-enable-auto-capture">Enable auto-capture</label>
+                <p class="configHint">Auto-capture is the launch mode and the auto-capture timeout is armed. <span class="configDefault">Default: enabled</span></p>
+              </div>
+              <div class="configRowControl">
+                <label class="configSwitch">
+                  <input type="checkbox" id="cfg-enable-auto-capture" checked/>
+                  <span class="configSwitchTrack" aria-hidden="true"></span>
+                </label>
+              </div>
+            </div>
+            <div class="configRow">
+              <div class="configRowText">
+                <label class="configLabel" for="cfg-enable-tap-to-capture">Enable tap to capture</label>
+                <p class="configHint">Makes tap-to-capture available to the user. <span class="configDefault">Default: enabled</span></p>
+              </div>
+              <div class="configRowControl">
+                <label class="configSwitch">
+                  <input type="checkbox" id="cfg-enable-tap-to-capture" checked/>
+                  <span class="configSwitchTrack" aria-hidden="true"></span>
+                </label>
+              </div>
+            </div>
+            <div class="configRow">
+              <div class="configRowText">
+                <label class="configLabel" for="cfg-toggle-delay">Auto-capture toggle delay</label>
+                <p class="configHint">The amount of seconds entered will reflect the amount of time it will take to show the auto-capture toggle. <span class="configDefault">Default: 15 seconds</span></p>
+              </div>
+              <div class="configRowControl">
+                <input type="number" id="cfg-toggle-delay" class="configNumber" min="0" max="300" step="1" value="15" required/>
+                <span class="configUnit">sec</span>
+              </div>
+            </div>
+            <div class="configRow">
+              <div class="configRowText">
+                <label class="configLabel" for="cfg-show-toggle">Show auto-capture toggle</label>
+                <p class="configHint">By disabling the show auto-capture toggle setting, the toggle never appears and the user cannot switch capture mode. <span class="configDefault">Default: enabled</span></p>
+              </div>
+              <div class="configRowControl">
+                <label class="configSwitch">
+                  <input type="checkbox" id="cfg-show-toggle" checked/>
+                  <span class="configSwitchTrack" aria-hidden="true"></span>
+                </label>
+              </div>
+            </div>
+            <div class="configRow">
+              <div class="configRowText">
+                <label class="configLabel" for="cfg-enable-auto-capture-timeout">Enable auto-capture timeout</label>
+                <p class="configHint">By disabling the auto-capture timeout setting, auto-capture keeps running instead of timing out. <span class="configDefault">Default: enabled</span></p>
+              </div>
+              <div class="configRowControl">
+                <label class="configSwitch">
+                  <input type="checkbox" id="cfg-enable-auto-capture-timeout" checked/>
+                  <span class="configSwitchTrack" aria-hidden="true"></span>
+                </label>
+              </div>
+            </div>
+            <div class="configRow">
+              <div class="configRowText">
+                <label class="configLabel" for="cfg-auto-capture-timeout">Auto-capture timeout</label>
+                <p class="configHint">The amount of seconds entered will reflect how long auto-capture runs before it times out. Must be greater than the auto-capture toggle delay. <span class="configDefault">Default: 60 seconds</span></p>
+              </div>
+              <div class="configRowControl">
+                <input type="number" id="cfg-auto-capture-timeout" class="configNumber" min="1" max="600" step="1" value="60" required/>
+                <span class="configUnit">sec</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="configGroup">
+          <h2 class="configGroupTitle">Document</h2>
+          <div class="configGroupBody">
+            <div class="configRow">
+              <div class="configRowText">
+                <label class="configLabel" for="cfg-document-animation">Front or back of document animation</label>
+                <p class="configHint">This setting will determine whether the front or back of document animation is displayed on document camera initialisation. <span class="configDefault">Default: front</span></p>
+              </div>
+              <div class="configRowControl">
+                <select id="cfg-document-animation" class="configSelect">
+                  <option value="front" selected>Front</option>
+                  <option value="back">Back</option>
+                </select>
+              </div>
+            </div>
+            <div class="configRow">
+              <div class="configRowText">
+                <label class="configLabel" for="cfg-document-type">Document type</label>
+                <p class="configHint">Selects the capture guidance and AssureID DPI gating. In auto, the SDK infers ID or passport from the detected document's aspect ratio. <span class="configDefault">Default: auto</span></p>
+              </div>
+              <div class="configRowControl">
+                <select id="cfg-document-type" class="configSelect">
+                  <option value="auto" selected>Auto</option>
+                  <option value="id">ID card</option>
+                  <option value="passport">Passport</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <p id="doc-config-validation" class="configValidation hidden" role="status"></p>
+      <div class="configFooter">
+        <button id="doc-config-reset" class="menuButton menuButton--secondary" type="button">Reset to defaults</button>
+        <button id="doc-config-launch" class="menuButton menuButton--primary" type="button">Launch SmartCapture Document</button>
       </div>
     </div>
   </div>
@@ -95,11 +275,12 @@
       class='documentCamera hidden'
       id="live-document-camera"
       data-samsung-a53-acquisition-test
+      tabindex="-1"
     >
     </live-document-camera>
   </div>
   <div id="face-result" class="formbg padding-horizontal--48 hidden">
-    <canvas id='face-canvas' class="padding-bottom--24 canvas-full-width"></canvas>
+    <img id='face-image' class="padding-bottom--24 canvas-full-width" alt="Captured face"/>
     <div class="field padding-bottom--24">
       <label for="face-base64-img-input">Base64 String</label>
       <textarea id="face-base64-img-input"></textarea>
@@ -143,7 +324,7 @@
     <div class="field padding-bottom--10">
       <button id="reset-camera-button" class="menuButton menuButton--primary">Capture Back Side</button>
     </div>
-    <div class="field padding-bottom--10">
+    <div class="field padding-bottom--10 hidden" id="doc-inspect-signals-field">
       <button id="doc-inspect-signals-button" class="menuButton menuButton--primary">Inspect IAD Signals</button>
     </div>
 <div class="field padding-bottom--24">

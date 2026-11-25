@@ -4,15 +4,16 @@ const liveFaceCamera = document.getElementById('live-face-camera');
 const menuButtons = document.getElementById('menu');
 const livenessResult = document.getElementById('face-result');
 const liveFaceCaptureButton = document.getElementById('live-face-button');
-const spinner = document.getElementById('spinner');
 const modal = document.getElementById('modal');
 const modalText = document.getElementById('modal-text');
 const modalBackButton = document.getElementById('modal-back-button');
 const modalTryAgainButton = document.getElementById('modal-try-again');
 const modalClose = document.getElementById('modal-close');
 const errorCamera = document.getElementById('error-camera');
-const faceCanvas = document.getElementById('face-canvas');
+const faceImage = document.getElementById('face-image');
 const saveButton = document.getElementById('face-save-button');
+
+let capturedImageBase64 = null;
 
 // Rendering the full ~1MB base64 string into the textarea costs iOS Safari
 // ~4s of layout, which blocked the whole transition into this results view
@@ -41,17 +42,24 @@ const loadFullBase64 = event => {
   pendingBase64 = null;
 };
 
-const onCapture = async (e) => {
+const onCapture = (e) => {
   console.debug('[SmartCapture LiveFaceCamera Demo] capture received at', new Date().toISOString());
-
-  // Hide the menu buttons and show the spinner
-  menuButtons.classList.add('hidden');
-  spinner.classList.remove('hidden');
 
   const { imageBase64, encryptedFile } = e.detail;
 
   // Get the base64 image data from e.detail
-  const capturedImage = `data:image/jpeg;base64,${imageBase64}`;
+  capturedImageBase64 = `data:image/jpeg;base64,${imageBase64}`;
+
+  // Reveal the results synchronously. The SDK dispatches close on the microtask
+  // straight after capture, and onClose re-shows the menu unless the results are
+  // already visible — revealing them from an img.onload callback instead let the
+  // home screen reappear underneath the spinner until the decode finished, which
+  // on a phone is seconds rather than a sub-frame flicker.
+  // Handing the base64 to the <img> also drops our decode-into-canvas step, so
+  // the browser decodes once, for display, off the main thread.
+  faceImage.src = capturedImageBase64;
+  menuButtons.classList.add('hidden');
+  livenessResult.classList.remove('hidden');
 
   // Converting the encryptedFile to a base64 string
   const reader = new FileReader();
@@ -60,47 +68,31 @@ const onCapture = async (e) => {
     const base64Data = reader.result;
     setBase64Field('face-base64-img-input', base64Data.replace(/^data:application\/octet-stream;base64,/, ''));
   };
+};
 
-  // Create a new Image element
-  const img = new Image();
-  img.src = capturedImage;
-
-  // Once the image is loaded, draw it on the canvas
-  img.onload = () => {
-    // Get canvas context and set dimensions based on the image data
-    const faceContext = faceCanvas.getContext('2d');
-    faceCanvas.height = img.naturalHeight;
-    faceCanvas.width = img.naturalWidth;
-
-    // Draw the image onto the canvas
-    faceContext.drawImage(img, 0, 0);
-
-    // Show the result section, and hide the spinner (keep menu hidden for consistency)
-    menuButtons.classList.add('hidden');
-    livenessResult.classList.remove('hidden');
-    spinner.classList.add('hidden');
-  };
-
-  // Handle any image loading errors
-  img.onerror = () => {
-    console.error('[SmartCapture LiveFaceCamera Demo] failed to load the image at', new Date().toISOString());
-
-    menuButtons.classList.remove('hidden');
-    livenessResult.classList.add('hidden');
-    spinner.classList.add('hidden');
-  };
+const dataUrlToBlob = (dataUrl) => {
+  const [header, base64] = dataUrl.split(',');
+  const mime = header.match(/:(.*?);/)[1];
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
 };
 
 const saveImage = () => {
+  if (!capturedImageBase64) return;
+
+  const blobUrl = URL.createObjectURL(dataUrlToBlob(capturedImageBase64));
+
   const link = document.createElement('a');
   document.body.appendChild(link); // for Firefox
-  const dataURL = faceCanvas.toDataURL('image/jpeg', 0.92);
 
-  link.setAttribute('href', dataURL);
+  link.setAttribute('href', blobUrl);
   link.setAttribute('download', `${Date.now()}.jpg`);
   link.click();
 
   document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
 };
 
 const openLiveCamera = () => {
@@ -145,6 +137,11 @@ const onOpen = (_) => {
 
   // Component manages its own visibility
   menuButtons.classList.add('hidden');
+
+  // Drop the previous capture so the next results screen can't briefly show the
+  // old face while the new image decodes.
+  faceImage.removeAttribute('src');
+  capturedImageBase64 = null;
 };
 
 const onDetect = (_) => {
@@ -235,6 +232,10 @@ const setupLiveCamera = async () => {
   liveFaceCamera.addEventListener(LiveFaceCamera.CloseEventName, onClose);
   liveFaceCamera.addEventListener(LiveFaceCamera.UserCanceledEventName, onUserCanceled);
   liveFaceCamera.addEventListener(LiveFaceCamera.FailureEventName, onFailure);
+
+  faceImage.onerror = () => {
+    console.error('[SmartCapture LiveFaceCamera Demo] failed to load the image at', new Date().toISOString());
+  };
 
   liveFaceCaptureButton.addEventListener('click', openLiveCamera);
   saveButton.addEventListener('click', saveImage);

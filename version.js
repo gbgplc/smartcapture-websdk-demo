@@ -1,1 +1,1 @@
-globalThis.__SDK_VERSION__='2.3.0';
+globalThis.__SDK_VERSION__='2.4.0';

@@ -1,6 +1,9 @@
 import { LiveDocumentCamera, SmartCaptureModule } from '@gbgplc/smartcapture-web';
 
-const IAD_ENABLED = new URLSearchParams(globalThis.location?.search).has('iad');
+// ?iad turns on the internal IAD view: the SDK hands back the signals it sealed
+// into the JBX (`yarn start` builds only) and the demo asks for the motion
+// sensor permission. Signals are always collected and sealed either way.
+const SHOW_IAD_SIGNALS = new URLSearchParams(globalThis.location?.search).has('iad');
 
 const versionPill = document.getElementById('version-pill');
 if (versionPill && globalThis.__SDK_VERSION__) {
@@ -18,18 +21,19 @@ const modalText = document.getElementById('modal-text');
 const modalBackButton = document.getElementById('modal-back-button');
 const modalTryAgainButton = document.getElementById('modal-try-again');
 const modalClose = document.getElementById('modal-close');
-const iadModal = document.getElementById('iad-modal');
-const iadModalClose = document.getElementById('iad-modal-close');
-const iadSignalsTextarea = document.getElementById('iad-signals-textarea');
-const iadSignalsView = document.getElementById('iad-signals-view');
-const iadCopyJsonButton = document.getElementById('iad-copy-json-button');
-const iadDownloadJsonButton = document.getElementById('iad-download-json-button');
 const documentResult = document.getElementById('doc-result');
 const documentCanvas = document.getElementById('doc-canvas');
 const saveButton = document.getElementById('doc-save-button');
-const inspectSignalsButton = document.getElementById('doc-inspect-signals-button');
 let capturedImageBase64 = null;
+let capturedJbx = null;
 let capturedIadSignals = null;
+const iadModal = document.getElementById('iad-modal');
+const iadModalClose = document.getElementById('iad-modal-close');
+const iadSignalsView = document.getElementById('iad-signals-view');
+const iadCopyJsonButton = document.getElementById('iad-copy-json-button');
+const iadDownloadJsonButton = document.getElementById('iad-download-json-button');
+const inspectSignalsField = document.getElementById('doc-inspect-signals-field');
+const inspectSignalsButton = document.getElementById('doc-inspect-signals-button');
 const resetCameraButton = document.getElementById('reset-camera-button');
 
 const getSensorPermissionStateFromResult = (result) => {
@@ -69,12 +73,7 @@ const requestDeviceSensorPermissionsOnUserGesture = async () => {
   globalThis.__SC_ORIENTATION_PERMISSION_STATE__ = orientationState;
 };
 
-// Configure timeout for auto-capture
-liveDocumentCamera.autoCaptureTimeout = 60000; // 1 minute (default)
-liveDocumentCamera.enableAutoCaptureTimeout = true;
-// SDK-side IAD collection is opt-in and off by default — only turn it on when
-// the demo's own ?iad flag is present, so the two stay in lockstep.
-liveDocumentCamera.enableInjectionAttackDetection = IAD_ENABLED;
+liveDocumentCamera.exposeIadSignals = SHOW_IAD_SIGNALS;
 
 const setUIValues = (id, value) => {
   const el = document.getElementById(id);
@@ -140,10 +139,25 @@ const onDetect = (_) => {
 const onClose = (_) => {
   console.debug('[SmartCapture LiveDocumentCamera Demo] close received at', new Date().toISOString());
 
+  // Launching moves focus onto the camera, so closing it would otherwise leave
+  // focus on a `display: none` element. Hand focus to whatever replaces it.
+  const cameraHadFocus =
+    document.activeElement === liveDocumentCamera ||
+    liveDocumentCamera.contains(document.activeElement);
+
   liveDocumentCamera.classList.add('hidden');
   documentCameraShell.classList.remove('documentCameraShellActive');
   if (modal.classList.contains('hidden') && documentResult.classList.contains('hidden')) {
     menuButtons.classList.remove('hidden');
+  }
+
+  if (cameraHadFocus) {
+    const destination = !documentResult.classList.contains('hidden')
+      ? document.getElementById('doc-save-button')
+      : !modal.classList.contains('hidden')
+        ? modalTryAgainButton
+        : liveDocumentCaptureButton;
+    destination?.focus();
   }
 };
 
@@ -160,7 +174,25 @@ const onCapture = (e) => {
   documentCameraShell.classList.remove('documentCameraShellActive');
 
   capturedImageBase64 = captureResponse.imageBase64 ?? null;
-  capturedIadSignals = captureResponse.metrics?.iadSignals ?? null;
+  capturedJbx = captureResponse.jbx?.bytes ?? null;
+  capturedIadSignals = captureResponse.iadSignals ?? null;
+  if (inspectSignalsField) inspectSignalsField.classList.toggle('hidden', !SHOW_IAD_SIGNALS);
+  if (capturedJbx) {
+    const hasJbxHeader =
+      capturedJbx.length >= 10 &&
+      capturedJbx[0] === 0xff &&
+      capturedJbx[1] === 0xd8 &&
+      capturedJbx[2] === 0xff &&
+      capturedJbx[3] === 0xef &&
+      capturedJbx[6] === 0x4a &&
+      capturedJbx[7] === 0x42 &&
+      capturedJbx[8] === 0x58 &&
+      capturedJbx[9] === 0x00;
+    console.info('[SmartCapture LiveDocumentCamera Demo] JBX evidence', {
+      byteLength: capturedJbx.byteLength,
+      hasJbxHeader,
+    });
+  }
   const baseStr = capturedImageBase64
     ? capturedImageBase64.replace(/^data:image\/\w+;base64,/, '')
     : 'NA';
@@ -214,7 +246,6 @@ const onFailure = (e) => {
 
 const goHome = () => {
   modal.classList.add('hidden');
-  if (iadModal) iadModal.classList.add('hidden');
   syncBodyScrollLock();
   documentResult.classList.add('hidden');
   const faceResult = document.getElementById('face-result');
@@ -225,7 +256,6 @@ const goHome = () => {
 
 const restartCamera = async () => {
   modal.classList.add('hidden');
-  if (iadModal) iadModal.classList.add('hidden');
   syncBodyScrollLock();
   documentResult.classList.add('hidden');
   const faceResult = document.getElementById('face-result');
@@ -242,20 +272,236 @@ const restartCamera = async () => {
   liveDocumentCamera.isOpen = true;
 };
 
+// --- Document camera configuration ------------------------------------------
+// The SC demo launches the document camera through a configuration modal so
+// different SDK configurations can be demoed without a rebuild. Every control's
+// starting value in index.html mirrors the SDK's own default, so launching
+// without touching anything initialises the camera with the default settings.
+const docConfigModal = document.getElementById('doc-config-modal');
+const docConfigCloseButton = document.getElementById('doc-config-close');
+const docConfigLaunchButton = document.getElementById('doc-config-launch');
+const docConfigResetButton = document.getElementById('doc-config-reset');
+const docConfigValidation = document.getElementById('doc-config-validation');
+
+// Values are the SDK defaults, used by "Reset to defaults". Durations are in
+// seconds here (as the user enters them) and converted to milliseconds on apply.
+const DOC_CONFIG_DEFAULTS = {
+  'cfg-show-back-button': true,
+  'cfg-hide-help-icon': false,
+  'cfg-show-preview-screen': false,
+  'cfg-success-time': 1.5,
+  'cfg-enable-auto-capture': true,
+  'cfg-enable-tap-to-capture': true,
+  'cfg-toggle-delay': 15,
+  'cfg-show-toggle': true,
+  'cfg-enable-auto-capture-timeout': true,
+  'cfg-auto-capture-timeout': 60,
+  'cfg-document-animation': 'front',
+  'cfg-document-type': 'auto',
+};
+
+const docConfigInputs = () =>
+  Object.keys(DOC_CONFIG_DEFAULTS).map(id => document.getElementById(id));
+
+const readConfigFlag = (id) => document.getElementById(id).checked;
+
+const readConfigChoice = (id) => document.getElementById(id).value;
+
+// Returns null for anything that is not a usable duration, so validation can
+// report it instead of pushing NaN into the component.
+const readConfigSeconds = (id) => {
+  const seconds = Number.parseFloat(document.getElementById(id).value);
+  return Number.isFinite(seconds) && seconds >= 0 ? seconds : null;
+};
+
+// Resolve an unusable duration to the SDK default rather than letting
+// `null * 1000` push a silent 0ms value. This is load-bearing for the
+// auto-capture timeout, which validation deliberately does not require while it
+// is disarmed, so a blank field can legitimately reach here for a property the
+// SDK will not read.
+const readConfigMs = (id) =>
+  (readConfigSeconds(id) ?? DOC_CONFIG_DEFAULTS[id]) * 1000;
+
+// The number inputs declare min/max/step (and required), so let the browser's
+// own constraint validation be the source of truth: the spinner affordances and
+// this check can then never disagree. Returns null when the field is fine.
+const describeConfigConstraint = (id) => {
+  const input = document.getElementById(id);
+  if (input.checkValidity()) return null;
+  const label = document.querySelector(`label[for="${id}"]`)?.textContent?.trim() ?? id;
+  const { valueMissing, rangeUnderflow, rangeOverflow, stepMismatch } = input.validity;
+  const seconds = (value) => (Number(value) === 1 ? '1 second' : `${value} seconds`);
+  if (valueMissing) return `${label} must be given as a number of seconds.`;
+  if (rangeUnderflow) return `${label} must be at least ${seconds(input.min)}.`;
+  if (rangeOverflow) return `${label} must be at most ${seconds(input.max)}.`;
+  if (stepMismatch) return `${label} must be a multiple of ${seconds(input.step)}.`;
+  return `${label} must be a valid number of seconds.`;
+};
+
+// A duration only has to satisfy its constraints when the SDK will actually act
+// on it, so that the value shown in the field is always the value applied. The
+// success overlay and the toggle delay are always read; the auto-capture
+// timeout is only read when it is armed.
+const validateDocConfig = () => {
+  for (const id of ['cfg-success-time', 'cfg-toggle-delay']) {
+    const constraint = describeConfigConstraint(id);
+    if (constraint) return { error: constraint, field: id };
+  }
+  const toggleDelay = readConfigSeconds('cfg-toggle-delay');
+
+  const autoCapture = readConfigFlag('cfg-enable-auto-capture');
+  const tapToCapture = readConfigFlag('cfg-enable-tap-to-capture');
+  // Mirrors the SDK: with both modes disabled it falls back to auto, so the
+  // timeout is still armed in that row of the capture-mode matrix.
+  const bothModesDisabled = !autoCapture && !tapToCapture;
+  const autoModeOn = autoCapture || bothModesDisabled;
+  const timeoutArmed = readConfigFlag('cfg-enable-auto-capture-timeout') && autoModeOn;
+
+  const autoCaptureTimeout = readConfigSeconds('cfg-auto-capture-timeout');
+  if (timeoutArmed) {
+    const constraint = describeConfigConstraint('cfg-auto-capture-timeout');
+    if (constraint) return { error: constraint, field: 'cfg-auto-capture-timeout' };
+  }
+
+  const notices = [];
+
+  if (bothModesDisabled) {
+    notices.push('Disabling both capture modes is a misconfiguration — the SDK normalises it back to the default behaviour (both enabled).');
+  }
+
+  // The SDK requires autoCaptureTimeout > toggleAutoCaptureDelay, but it
+  // enforces that itself: LiveDocumentCamera raises the timeout to the delay
+  // plus a 10s buffer and warns. Report what it will do instead of blocking a
+  // configuration the SDK accepts.
+  if (timeoutArmed && autoCaptureTimeout <= toggleDelay) {
+    notices.push(`The auto-capture timeout (${autoCaptureTimeout}s) must be greater than the auto-capture toggle delay (${toggleDelay}s) — the SDK will raise it to ${toggleDelay + 10}s and log a warning.`);
+  }
+
+  return notices.length ? { notice: notices.join(' ') } : {};
+};
+
+// Renders the validation state and returns the blocking error, if any.
+const refreshDocConfigValidation = () => {
+  const { error, notice, field } = validateDocConfig();
+  const message = error ?? notice ?? '';
+  docConfigValidation.textContent = message;
+  docConfigValidation.classList.toggle('hidden', message === '');
+  docConfigValidation.classList.toggle('configValidation--notice', !error && message !== '');
+  docConfigLaunchButton.disabled = Boolean(error);
+  docConfigInputs().forEach(input => input.removeAttribute('aria-invalid'));
+  if (field) document.getElementById(field).setAttribute('aria-invalid', 'true');
+  return error;
+};
+
+const applyDocumentCameraConfig = () => {
+  liveDocumentCamera.showBackButton = readConfigFlag('cfg-show-back-button');
+  // Surfaced to the user as "hide help icon" (default off) while the SDK
+  // property is the positive "showHelpIcon" (default on).
+  liveDocumentCamera.showHelpIcon = !readConfigFlag('cfg-hide-help-icon');
+  liveDocumentCamera.showPreviewScreen = readConfigFlag('cfg-show-preview-screen');
+  liveDocumentCamera.successTime = readConfigMs('cfg-success-time');
+  liveDocumentCamera.enableAutoCapture = readConfigFlag('cfg-enable-auto-capture');
+  liveDocumentCamera.enableTapToCapture = readConfigFlag('cfg-enable-tap-to-capture');
+  liveDocumentCamera.toggleAutoCaptureDelay = readConfigMs('cfg-toggle-delay');
+  liveDocumentCamera.showToggle = readConfigFlag('cfg-show-toggle');
+  liveDocumentCamera.enableAutoCaptureTimeout = readConfigFlag('cfg-enable-auto-capture-timeout');
+  liveDocumentCamera.autoCaptureTimeout = readConfigMs('cfg-auto-capture-timeout');
+  liveDocumentCamera.documentType = readConfigChoice('cfg-document-type');
+  liveDocumentCamera.showBackOfDocumentAnimation =
+    readConfigChoice('cfg-document-animation') === 'back';
+};
+
+const resetDocConfig = () => {
+  Object.entries(DOC_CONFIG_DEFAULTS).forEach(([id, value]) => {
+    const input = document.getElementById(id);
+    if (typeof value === 'boolean') {
+      input.checked = value;
+    } else {
+      input.value = String(value);
+    }
+  });
+  refreshDocConfigValidation();
+};
+
+const openDocConfigModal = () => {
+  documentResult.classList.add('hidden');
+  const faceResult = document.getElementById('face-result');
+  if (faceResult) faceResult.classList.add('hidden');
+  refreshDocConfigValidation();
+  docConfigModal.classList.remove('hidden');
+  syncBodyScrollLock();
+  // The dialog declares aria-modal, so move focus into it rather than leaving
+  // it on the home screen behind the overlay.
+  document.getElementById('cfg-show-back-button').focus();
+};
+
+const closeDocConfigModal = () => {
+  docConfigModal.classList.add('hidden');
+  syncBodyScrollLock();
+};
+
+// Dismissing (X or Escape) leaves the user on the home screen, so hand focus
+// back to the button that opened the modal. Without this the focused control is
+// inside a `display: none` subtree, which strands keyboard and screen-reader
+// users. See onLiveCameraShown for the launch path's own destination.
+const dismissDocConfigModal = () => {
+  closeDocConfigModal();
+  liveDocumentCaptureButton.focus();
+};
+
+// The dialog markup sits before #menu in the document, so without a trap a Tab
+// from the last control lands on the launch buttons and footer links behind the
+// overlay. The backdrop already blocks the mouse and aria-modal scopes assistive
+// tech; this is the keyboard half.
+const docConfigFocusables = () =>
+  [...docConfigModal.querySelectorAll('button, input, select')].filter(
+    el => !el.disabled && el.offsetParent !== null,
+  );
+
+const trapDocConfigTab = (event) => {
+  const focusables = docConfigFocusables();
+  if (!focusables.length) return;
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+  const active = document.activeElement;
+  if (event.shiftKey && (active === first || !docConfigModal.contains(active))) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && active === last) {
+    event.preventDefault();
+    first.focus();
+  }
+};
+
+const onDocConfigKeydown = (event) => {
+  if (docConfigModal.classList.contains('hidden')) return;
+  if (event.key === 'Escape') {
+    dismissDocConfigModal();
+  } else if (event.key === 'Tab') {
+    trapDocConfigTab(event);
+  }
+};
+
+const launchFromDocConfig = () => {
+  if (refreshDocConfigValidation()) return;
+  closeDocConfigModal();
+  openLiveCamera();
+};
+
 const openLiveCamera = () => {
   documentResult.classList.add('hidden');
   const faceResult = document.getElementById('face-result');
   if (faceResult) faceResult.classList.add('hidden');
-  // resetCamera() (the "Capture Backside" flow) leaves this set to true on
-  // the component — every fresh launch from the home screen starts a new
-  // document, so this must default back to the frontside animation instead
-  // of inheriting whatever the previous session's flow left behind.
-  liveDocumentCamera.showBackOfDocumentAnimation = false;
+  // resetCamera() (the "Capture Backside" flow) leaves
+  // showBackOfDocumentAnimation set to true on the component — every fresh
+  // launch from the home screen starts a new document, so re-apply the
+  // configured settings here instead of inheriting whatever the previous
+  // session's flow left behind.
+  applyDocumentCameraConfig();
 
-  // Only pre-request motion/orientation permissions when IAD is enabled — this
-  // is purely in service of the IAD motion signals; the normal capture flow
-  // has no use for them and should not prompt for them.
-  const sensorPermissionsIfIadEnabled = IAD_ENABLED
+  // The SDK never prompts for motion/orientation itself, and Document IAD does
+  // not advertise motion signals, so the demo only asks under ?iad.
+  const sensorPermissionsIfIadEnabled = SHOW_IAD_SIGNALS
     ? requestDeviceSensorPermissionsOnUserGesture().catch(() => {
         globalThis.__SC_MOTION_PERMISSION_STATE__ = globalThis.__SC_MOTION_PERMISSION_STATE__ || 'error';
         globalThis.__SC_ORIENTATION_PERMISSION_STATE__ = globalThis.__SC_ORIENTATION_PERMISSION_STATE__ || 'error';
@@ -270,25 +516,57 @@ const openLiveCamera = () => {
       liveDocumentCamera.classList.remove('hidden');
       liveDocumentCamera.isOpen = true;
       errorCamera.classList.add('hidden');
+      // Launching from the modal leaves focus on a control that is now inside a
+      // `display: none` subtree. The camera is what became visible, so send
+      // focus to it (it carries tabindex="-1" for exactly this).
+      liveDocumentCamera.focus();
       stream.getTracks().forEach(track => track.stop());
     })
     .catch((err) => {
       console.error('[SmartCapture LiveDocumentCamera Demo] error accessing the camera at', new Date().toISOString(), ':', err);
       errorCamera.classList.remove('hidden');
+      // The camera never opened and the home screen is still up, so put focus
+      // back on the launch button rather than leaving it in the hidden modal.
+      liveDocumentCaptureButton.focus();
     });
 };
 
+const dataUrlToBlob = (dataUrl) => {
+  const [header, base64] = dataUrl.split(',');
+  const mime = header.match(/:(.*?);/)[1];
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+};
+
 const saveImage = () => {
+  if (capturedJbx) {
+    const url = URL.createObjectURL(
+      new Blob([capturedJbx], { type: 'image/jpeg' }),
+    );
+    const link = document.createElement('a');
+    document.body.appendChild(link);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${Date.now()}-jbx.jpg`);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return;
+  }
   if (!capturedImageBase64) return;
+
+  const blobUrl = URL.createObjectURL(dataUrlToBlob(capturedImageBase64));
 
   const link = document.createElement('a');
   document.body.appendChild(link);
 
-  link.setAttribute('href', capturedImageBase64);
+  link.setAttribute('href', blobUrl);
   link.setAttribute('download', `${Date.now()}.jpg`);
   link.click();
 
   link.remove();
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
 };
 
 const resetCamera = async () => {
@@ -304,28 +582,12 @@ const resetCamera = async () => {
   liveDocumentCamera.isOpen = true;
 };
 
-// Pretty-prints a string that looks like a JSON object/array; returns the
-// original string unchanged when it is not valid JSON.
-const tryPrettyJson = (text) => {
-  const trimmed = text.trim();
-  const looksLikeJson =
-    (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
-    (trimmed.startsWith('[') && trimmed.endsWith(']'));
-  if (!looksLikeJson) return text;
-  try {
-    return JSON.stringify(JSON.parse(trimmed), null, 2);
-  } catch {
-    // Looked like JSON but did not parse — show the raw string as-is.
-    return text;
-  }
-};
+// --- Internal IAD signals view (?iad) --------------------------------------
 
 const formatSignalValue = (value) => {
   if (value === undefined || value === null || value === '') return 'N/A';
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   if (Array.isArray(value)) return value.length ? value.join('\n') : '[]';
-  if (typeof value === 'number') return Number.isFinite(value) ? `${value}` : 'N/A';
-  if (typeof value === 'string') return tryPrettyJson(value);
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);
 };
@@ -335,416 +597,76 @@ const humanizeLabel = (text) => text
   .replaceAll('_', ' ')
   .replaceAll(/\b\w/g, c => c.toUpperCase());
 
-const SECTION_TOOLTIPS = {
-  schemaVersion: 'Schema version of the client IAD payload. Use it for parser compatibility and migration control.',
-  captureProvenance: 'Capture lifecycle and camera settings evidence. Useful to detect inconsistent constraints, permission anomalies, and suspicious capture timing.',
-  cameraDeviceFingerprint: 'Pseudonymous device/camera fingerprinting (FNV-1a hashes, not anonymized). Useful to detect virtual cameras, emulator patterns, and unusual device inventories.',
-  streamIntegrity: 'Runtime stream behavior signals. Useful to detect replay/injection patterns through cadence anomalies, duplicate frames, and stream lifecycle interruptions.',
-  imageConsistency: 'Frame-level statistical consistency. Useful to detect static/replayed feeds with low temporal variation.',
-  clientIntegrity: 'Browser/runtime integrity hints. Useful for automation/emulation risk uplift.',
-  motionIntegrity: 'Motion and orientation sensor consistency (best effort). Useful to identify static/replayed sessions and suspiciously flat sensor behavior on mobile devices.',
-  replayProtection: 'Replay-window enforcement signals. Nonce binding is planned for a future iteration; timestampUtc is populated now.',
-};
-
-const FIELD_TOOLTIPS = {
-  'captureProvenance.captureStartUtc': 'UTC timestamp when capture flow started. Use with end time and nonce TTL to detect replay windows.',
-  'captureProvenance.captureEndUtc': 'UTC timestamp when selected frame was finalized. Helps correlate session chronology and replay checks.',
-  'captureProvenance.monotonicDurationMs': 'High-resolution elapsed capture duration. Unexpectedly low/high durations can indicate automation or injection behavior.',
-  'captureProvenance.requestedVideoConstraints': 'Requested WebRTC constraints. Compare against applied settings to spot mismatches.',
-  'captureProvenance.appliedTrackSettings': 'Effective camera settings from MediaStreamTrack. Mismatch vs requested constraints can increase risk.',
-  'captureProvenance.trackCapabilitiesPresent': 'Capabilities exposed by active track. Missing or unusual capability sets can be environment-specific signals.',
-  'captureProvenance.permissionCameraBefore': 'Camera permission state before starting capture.',
-  'captureProvenance.permissionCameraAfter': 'Camera permission state after stream acquisition. Unexpected transitions can be suspicious.',
-  'cameraDeviceFingerprint.videoinputCount': 'Count of detected video input devices. Extremely unusual counts can indicate emulator/virtual environments.',
-  'cameraDeviceFingerprint.audioinputCount': 'Count of detected audio input devices. Can support environment consistency checks.',
-  'cameraDeviceFingerprint.selectedDeviceIdHash': 'Hashed selected device ID (privacy-safe). Use for per-device baselining without raw identifiers.',
-  'cameraDeviceFingerprint.selectedGroupIdHash': 'Hashed device group ID (privacy-safe). Helps cluster related media hardware.',
-  'cameraDeviceFingerprint.selectedLabelHash': 'Hashed selected camera label (privacy-safe).',
-  'cameraDeviceFingerprint.selectedFacingMode': 'Applied facing mode (e.g., environment/user). Unexpected values can be suspicious for document capture.',
-  'cameraDeviceFingerprint.backCameraDetected': 'Whether a back camera was detected in inventory.',
-  'cameraDeviceFingerprint.suspiciousVirtualCameraLabelHashes': 'FNV-1a hashes of labels matching known virtual-camera keywords (OBS, ManyCam, Snap Camera, etc.). Empty if none detected. Backend decides whether to treat any as suspicious.',
-  'streamIntegrity.avgFps': 'Average frame rate during analyzed frames.',
-  'streamIntegrity.fpsStdDev': 'Frame rate variability. High instability can indicate injection/replay pipelines.',
-  'streamIntegrity.duplicateFrameRatio': 'Ratio of repeated frame signatures. Elevated ratios can indicate replay/static feeds.',
-  'streamIntegrity.duplicateFrames': 'Absolute count of duplicate frame signatures.',
-  'streamIntegrity.analyzedFrames': 'Total frames analyzed for stream integrity signals.',
-  'streamIntegrity.videoDimensionChangeCount': 'Number of active stream dimension changes. Unexpected changes can be suspicious.',
-  'streamIntegrity.trackMutedEventCount': 'Count of track mute events during capture session.',
-  'streamIntegrity.trackUnmutedEventCount': 'Count of track unmute events during capture session.',
-  'streamIntegrity.trackEndedEventCount': 'Count of track ended events during capture session.',
-  'streamIntegrity.visibilityHiddenCount': 'How many times app/tab went hidden while capture session was active.',
-  'streamIntegrity.visibilityVisibleCount': 'How many times app/tab returned visible while capture session was active.',
-  'streamIntegrity.browserResumeCount': 'Detection loop resumes after backgrounding/throttling. Frequent resumes can affect trust.',
-  'streamIntegrity.canvasReadFailureCount': 'Frame extraction failures from canvas/video. Can indicate tampering or unstable environment.',
-  'streamIntegrity.sequenceBreakCount': 'SDK sequence-break errors raised during capture.',
-  'imageConsistency.luminanceMean': 'Average luminance of sampled frames.',
-  'imageConsistency.luminanceStdDev': 'Luminance variation across sampled frames. Very low variation can indicate replay/static capture.',
-  'imageConsistency.varianceMean': 'Average spatial variance within sampled frame region.',
-  'imageConsistency.varianceStdDev': 'Spatial variance fluctuation over time. Low dynamics can indicate non-live content.',
-  'clientIntegrity.webdriver': 'Browser automation hint. True typically indicates automated tooling or controlled environment.',
-  'clientIntegrity.platform': 'Which SDK produced this payload. Always "Web" here; the Android SDK sends "Android". A fixed marker, not the host OS.',
-  'clientIntegrity.osPlatform': 'Host OS reported by User-Agent Client Hints (macOS, Windows, Android, iOS). Empty on Firefox/Safari, which do not expose it.',
-  'clientIntegrity.userAgent': 'User-agent string for backend policy/risk rules.',
-  'clientIntegrity.language': 'Browser language setting.',
-  'clientIntegrity.hardwareConcurrency': 'Reported logical CPU count; can assist in environment profiling.',
-  'clientIntegrity.maxTouchPoints': 'Reported touch-point capability; helps classify mobile vs desktop-like environments.',
-  'motionIntegrity.motionSupported': 'Whether DeviceMotionEvent is available in this environment.',
-  'motionIntegrity.orientationSupported': 'Whether DeviceOrientationEvent is available in this environment.',
-  'motionIntegrity.motionPermissionState': 'Runtime motion permission state (granted/denied/unsupported/gesture_required/blocked_by_policy/error).',
-  'motionIntegrity.orientationPermissionState': 'Runtime orientation permission state (granted/denied/unsupported/gesture_required/blocked_by_policy/error).',
-  'motionIntegrity.motionSamplesCount': 'Number of motion sensor samples collected during capture.',
-  'motionIntegrity.orientationSamplesCount': 'Number of orientation samples collected during capture.',
-  'motionIntegrity.motionCoverageMs': 'Duration covered by motion sampling during session.',
-  'motionIntegrity.sensorSamplingHzMean': 'Average sensor sampling rate in Hz.',
-  'motionIntegrity.sensorSamplingHzStdDev': 'Sensor sampling rate variability (Hz).',
-  'motionIntegrity.accelerationMagnitudeMean': 'Average acceleration magnitude from motion samples.',
-  'motionIntegrity.accelerationMagnitudeStdDev': 'Acceleration magnitude variability.',
-  'motionIntegrity.accelerationMagnitudeVariance': 'Acceleration magnitude variance.',
-  'motionIntegrity.rotationRateMagnitudeMean': 'Average rotation-rate magnitude from gyroscope-like data.',
-  'motionIntegrity.rotationRateMagnitudeStdDev': 'Rotation-rate variability.',
-  'motionIntegrity.rotationRateMagnitudeVariance': 'Rotation-rate variance.',
-  'motionIntegrity.orientationChangeCount': 'Count of meaningful orientation changes during capture.',
-  'motionIntegrity.motionFlatlineRatio': 'Ratio of near-zero motion samples. Higher values can indicate static/replayed sources.',
-  'replayProtection.nonce': 'Server-issued nonce for binding the payload to a specific session. Null until nonce binding is implemented.',
-  'replayProtection.timestampUtc': 'ISO 8601 UTC timestamp of capture end. Used for replay-window checks.',
-};
-
-const getFieldTooltip = (path, fieldKey) =>
-  FIELD_TOOLTIPS[path] || FIELD_TOOLTIPS[`${path}.${fieldKey}`] || '';
-
-const appendSignalRow = (container, key, value, tooltipText = '') => {
+const appendSignalRow = (container, key, value) => {
   const row = document.createElement('div');
   row.className = 'iadSignalRow';
-
   const label = document.createElement('div');
   label.className = 'iadSignalLabel';
-  const labelText = document.createElement('span');
-  labelText.textContent = humanizeLabel(key);
-  label.appendChild(labelText);
-
-  if (tooltipText) {
-    const tip = document.createElement('span');
-    tip.className = 'iadTooltipIcon';
-    tip.textContent = 'i';
-    tip.title = tooltipText;
-    tip.setAttribute('aria-label', tooltipText);
-    label.appendChild(tip);
-  }
-
+  label.textContent = humanizeLabel(key);
   const valueEl = document.createElement('div');
   valueEl.className = 'iadSignalValue';
   valueEl.textContent = formatSignalValue(value);
-
-  row.appendChild(label);
-  row.appendChild(valueEl);
+  row.append(label, valueEl);
   container.appendChild(row);
 };
 
-const renderSignalObjectRows = (container, obj, prefix = '', sectionPath = '') => {
-  Object.entries(obj || {}).forEach(([key, value]) => {
+const renderSignalObjectRows = (container, obj, prefix = '') => {
+  Object.entries(obj).forEach(([key, value]) => {
     const compositeKey = prefix ? `${prefix} > ${key}` : key;
-    const fieldPath = sectionPath ? `${sectionPath}.${key}` : key;
     if (value && typeof value === 'object' && !Array.isArray(value)) {
-      renderSignalObjectRows(container, value, compositeKey, fieldPath);
+      renderSignalObjectRows(container, value, compositeKey);
       return;
     }
-    appendSignalRow(container, compositeKey, value, getFieldTooltip(fieldPath, key));
+    appendSignalRow(container, compositeKey, value);
   });
 };
 
-// ---------------------------------------------------------------------------
-// Risk assessment is delegated to the IAD evaluation engine so that all
-// platforms (Android, iOS, Web) share a single scoring implementation.
-// ---------------------------------------------------------------------------
-const DEFAULT_IAD_ENGINE_URL = 'http://localhost:3000/evaluate';
-
-// The full IAD signals payload (device/camera/sensor/browser data) is POSTed
-// to this URL. Only a same-machine local-dev evaluator is a legitimate use of
-// the ?iadEngine override — anything else would let a crafted link exfiltrate
-// a visitor's signals to an arbitrary origin. Reject anything that isn't
-// http(s) to localhost/127.0.0.1/[::1] and fall back to the default.
-const isTrustedIadEngineUrl = (candidate) => {
-  try {
-    const url = new URL(candidate, globalThis.location?.href);
-    const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '[::1]']);
-    return (
-      (url.protocol === 'http:' || url.protocol === 'https:') &&
-      LOCAL_HOSTNAMES.has(url.hostname)
-    );
-  } catch {
-    // Not a parseable URL — treat as untrusted rather than throwing.
-    return false;
-  }
-};
-
-const requestedIadEngineUrl = new URLSearchParams(globalThis.location?.search).get('iadEngine');
-if (requestedIadEngineUrl && !isTrustedIadEngineUrl(requestedIadEngineUrl)) {
-  console.warn(
-    '[SmartCapture LiveDocumentCamera Demo] ignoring iadEngine override — only http(s) to localhost/127.0.0.1/[::1] is allowed:',
-    requestedIadEngineUrl,
-  );
-}
-const IAD_ENGINE_URL =
-  requestedIadEngineUrl && isTrustedIadEngineUrl(requestedIadEngineUrl)
-    ? requestedIadEngineUrl
-    : DEFAULT_IAD_ENGINE_URL;
-
-const RISK_LEVELS = new Set(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']);
-const FINDING_SEVERITIES = new Set(['critical', 'high', 'medium', 'low']);
-
-// Raised when the engine did reply but the body is not a risk assessment we can
-// render. Kept distinct from a transport failure so the UI does not tell people
-// the engine is unreachable when it answered — that sends them looking for a
-// networking problem that isn't there.
-class UnexpectedEngineResponseError extends Error {
-  constructor(message) {
-    super(message);
-    this.name = 'UnexpectedEngineResponseError';
-  }
-}
-
-const normalizeFinding = (finding, index) => {
-  if (!finding || typeof finding !== 'object') {
-    throw new UnexpectedEngineResponseError(
-      `findings[${index}] is not an object`,
-    );
-  }
-  if (typeof finding.signal !== 'string' || !finding.signal) {
-    throw new UnexpectedEngineResponseError(
-      `findings[${index}].signal is missing or not a string`,
-    );
-  }
-  return {
-    signal: finding.signal,
-    // A finding without usable prose still renders — fall back to its signal
-    // path rather than an empty bullet.
-    detail:
-      typeof finding.detail === 'string' && finding.detail
-        ? finding.detail
-        : finding.signal,
-    severity: FINDING_SEVERITIES.has(finding.severity)
-      ? finding.severity
-      : 'medium',
-  };
-};
-
-// Single place where an engine response becomes a shape the renderers can rely
-// on. Both renderRiskBanner() and the flagged-section logic previously assumed
-// every 200 carried findings[] with a string `signal` on each entry; a
-// valid-but-unexpected body made them throw mid-render.
-const normalizeAssessment = (raw) => {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-    throw new UnexpectedEngineResponseError('response body is not an object');
-  }
-
-  const level = typeof raw.level === 'string' ? raw.level.toUpperCase() : '';
-  if (!RISK_LEVELS.has(level)) {
-    throw new UnexpectedEngineResponseError(
-      `unrecognised risk level ${JSON.stringify(raw.level)}`,
-    );
-  }
-  if (!Array.isArray(raw.findings)) {
-    throw new UnexpectedEngineResponseError('findings is not an array');
-  }
-
-  const findings = raw.findings.map(normalizeFinding);
-
-  return {
-    level,
-    // Rendered as "n/a" rather than "NaN / 100" when absent or non-finite.
-    score: Number.isFinite(raw.score) ? raw.score : null,
-    findings,
-    flaggedSections: new Set(findings.map(f => f.signal.split('.')[0])),
-  };
-};
-
-const fetchRiskAssessment = async (signals) => {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 4000);
-  try {
-    const response = await fetch(IAD_ENGINE_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(signals),
-      signal: controller.signal,
-    });
-    if (!response.ok) {
-      // The engine answered — a status-code failure is not unreachability.
-      throw new UnexpectedEngineResponseError(`HTTP ${response.status}`);
-    }
-    let body;
-    try {
-      body = await response.json();
-    } catch (error) {
-      throw new UnexpectedEngineResponseError(
-        `response body is not valid JSON (${error.message})`,
-      );
-    }
-    return normalizeAssessment(body);
-  } finally {
-    clearTimeout(timeoutId);
-  }
-};
-
-const SEVERITY_LABEL = { critical: 'CRITICAL', high: 'HIGH', medium: 'MEDIUM', low: 'LOW' };
-
-const renderRiskBanner = (assessment) => {
-  const banner = document.createElement('div');
-  banner.className = `iadRiskBanner iadRiskBanner--${assessment.level.toLowerCase()}`;
-
-  const header = document.createElement('div');
-  header.className = 'iadRiskHeader';
-
-  const badge = document.createElement('span');
-  badge.className = 'iadRiskBadge';
-  badge.textContent = `${assessment.level} RISK`;
-
-  const scoreEl = document.createElement('span');
-  scoreEl.className = 'iadRiskScore';
-  scoreEl.textContent =
-    assessment.score === null
-      ? 'Score: n/a'
-      : `Score: ${assessment.score} / 100`;
-
-  header.appendChild(badge);
-  header.appendChild(scoreEl);
-  banner.appendChild(header);
-
-  if (assessment.findings.length > 0) {
-    const list = document.createElement('ul');
-    list.className = 'iadRiskFindings';
-    assessment.findings.forEach(f => {
-      const item = document.createElement('li');
-      item.className = `iadRiskFinding iadRiskFinding--${f.severity}`;
-      const dot = document.createElement('span');
-      dot.className = 'iadRiskFindingDot';
-      dot.setAttribute('aria-label', SEVERITY_LABEL[f.severity]);
-      const text = document.createElement('span');
-      text.textContent = f.detail;
-      item.appendChild(dot);
-      item.appendChild(text);
-      list.appendChild(item);
-    });
-    banner.appendChild(list);
-  } else {
-    const clean = document.createElement('p');
-    clean.className = 'iadRiskClean';
-    clean.textContent = 'No suspicious signals detected in this capture.';
-    banner.appendChild(clean);
-  }
-
-  const disclaimer = document.createElement('p');
-  disclaimer.className = 'iadRiskDisclaimer';
-  disclaimer.textContent = 'Assessment produced by the IAD evaluation engine.';
-  banner.appendChild(disclaimer);
-
-  return banner;
-};
-
-const SIGNAL_SECTION_ORDER = [
-  'schemaVersion',
-  'captureProvenance',
-  'cameraDeviceFingerprint',
-  'streamIntegrity',
-  'imageConsistency',
-  'clientIntegrity',
-  'motionIntegrity',
-  'replayProtection',
-];
-
-const buildSignalSectionTitle = (sectionKey, isFlagged) => {
+const buildSignalSection = (sectionKey, sectionValue) => {
+  const section = document.createElement('details');
+  section.className = 'iadSection';
+  section.open = sectionKey === 'captureProvenance';
   const title = document.createElement('summary');
   title.className = 'iadSectionTitle';
-  const titleText = document.createElement('span');
-  titleText.textContent = humanizeLabel(sectionKey);
-  title.appendChild(titleText);
-  if (isFlagged) {
-    const flag = document.createElement('span');
-    flag.className = 'iadSectionFlag';
-    flag.textContent = '⚠ Flagged';
-    title.appendChild(flag);
-  }
-  const sectionTip = SECTION_TOOLTIPS[sectionKey];
-  if (sectionTip) {
-    const tip = document.createElement('span');
-    tip.className = 'iadTooltipIcon';
-    tip.textContent = 'i';
-    tip.title = sectionTip;
-    tip.setAttribute('aria-label', sectionTip);
-    title.appendChild(tip);
-  }
-  return title;
-};
-
-const buildSignalSection = (sectionKey, signals, assessment) => {
-  const isFlagged = assessment?.flaggedSections.has(sectionKey) ?? false;
-  const section = document.createElement('details');
-  section.className = `iadSection${isFlagged ? ' iadSectionFlagged' : ''}`;
-  section.open =
-    isFlagged ||
-    sectionKey === 'schemaVersion' ||
-    sectionKey === 'captureProvenance';
-  section.appendChild(buildSignalSectionTitle(sectionKey, isFlagged));
-
+  title.textContent = humanizeLabel(sectionKey);
   const body = document.createElement('div');
   body.className = 'iadSectionBody';
-  const sectionValue = signals[sectionKey];
-  const isObject =
-    sectionValue && typeof sectionValue === 'object' && !Array.isArray(sectionValue);
-  if (isObject) {
-    renderSignalObjectRows(body, sectionValue, '', sectionKey);
+  if (sectionValue && typeof sectionValue === 'object' && !Array.isArray(sectionValue)) {
+    renderSignalObjectRows(body, sectionValue);
   } else {
-    appendSignalRow(body, 'value', sectionValue, getFieldTooltip(sectionKey, sectionKey));
+    appendSignalRow(body, sectionKey, sectionValue);
   }
-  section.appendChild(body);
+  section.append(title, body);
   return section;
 };
 
-const appendStatusMessage = (message) => {
-  const status = document.createElement('div');
-  status.className = 'iadEmptyState';
-  status.textContent = message;
-  iadSignalsView.appendChild(status);
-};
-
-const renderIadSignalsSummary = (signals, assessment, statusMessage) => {
-  if (!iadSignalsView) return;
+const renderIadSignals = () => {
   iadSignalsView.replaceChildren();
-
-  if (!signals) {
-    appendStatusMessage('No IAD signals available for this capture.');
+  if (!capturedIadSignals) {
+    const status = document.createElement('div');
+    status.className = 'iadEmptyState';
+    // A tap capture is not sealed; an auto capture from an obfuscated
+    // (published) build never hands the signals back.
+    status.textContent = capturedJbx
+      ? 'This SDK build does not expose IAD signals. Run the demo with yarn start.'
+      : 'No IAD signals: only auto-captured images are sealed. Tap-to-capture images carry no JBX.';
+    iadSignalsView.appendChild(status);
     return;
   }
-
-  if (assessment) {
-    iadSignalsView.appendChild(renderRiskBanner(assessment));
-  } else if (statusMessage) {
-    appendStatusMessage(statusMessage);
-  }
-
-  SIGNAL_SECTION_ORDER.forEach(sectionKey => {
-    if (sectionKey in signals) {
-      iadSignalsView.appendChild(
-        buildSignalSection(sectionKey, signals, assessment),
-      );
-    }
+  Object.entries(capturedIadSignals).forEach(([sectionKey, sectionValue]) => {
+    iadSignalsView.appendChild(buildSignalSection(sectionKey, sectionValue));
   });
 };
 
-const getIadSignalsJson = () => {
-  if (!capturedIadSignals) return '';
-  return JSON.stringify(capturedIadSignals, null, 2);
-};
+const getIadSignalsJson = () =>
+  capturedIadSignals ? JSON.stringify(capturedIadSignals, null, 2) : '';
 
 const copyIadSignalsJson = async () => {
   const payload = getIadSignalsJson();
   if (!payload || !navigator.clipboard?.writeText) return;
   try {
     await navigator.clipboard.writeText(payload);
-    if (iadCopyJsonButton) iadCopyJsonButton.classList.add('is-copied');
-    setTimeout(() => {
-      if (iadCopyJsonButton) iadCopyJsonButton.classList.remove('is-copied');
-    }, 1200);
+    iadCopyJsonButton.classList.add('is-copied');
+    setTimeout(() => iadCopyJsonButton.classList.remove('is-copied'), 1200);
   } catch (error) {
     // Clipboard access can be denied (permissions/insecure context); the demo
     // simply skips the copied-state feedback in that case.
@@ -755,8 +677,7 @@ const copyIadSignalsJson = async () => {
 const downloadIadSignalsJson = () => {
   const payload = getIadSignalsJson();
   if (!payload) return;
-  const blob = new Blob([payload], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(new Blob([payload], { type: 'application/json' }));
   const link = document.createElement('a');
   link.href = url;
   link.download = `iad-signals-${Date.now()}.json`;
@@ -769,67 +690,45 @@ const downloadIadSignalsJson = () => {
 };
 
 const openIadSignalsModal = () => {
-  if (!iadModal || !iadSignalsTextarea) return;
-  renderIadSignalsSummary(capturedIadSignals, null, 'Evaluating signals…');
-
-  iadSignalsTextarea.value = capturedIadSignals
-    ? JSON.stringify(capturedIadSignals, null, 2)
-    : 'No IAD signals available for this capture.';
+  renderIadSignals();
   iadModal.classList.remove('hidden');
   syncBodyScrollLock();
-
-  if (capturedIadSignals) {
-    fetchRiskAssessment(capturedIadSignals)
-      .then(assessment => {
-        renderIadSignalsSummary(capturedIadSignals, assessment, null);
-      })
-      .catch(error => {
-        const reason =
-          error instanceof UnexpectedEngineResponseError
-            ? `IAD evaluation engine at ${IAD_ENGINE_URL} returned an unexpected response — ${error.message}.`
-            : `IAD evaluation engine unreachable at ${IAD_ENGINE_URL}.`;
-        renderIadSignalsSummary(
-          capturedIadSignals,
-          null,
-          `${reason} Signals are shown without a risk assessment.`,
-        );
-      });
-  }
 };
 
 const closeIadSignalsModal = () => {
-  if (iadModal) iadModal.classList.add('hidden');
+  iadModal.classList.add('hidden');
   syncBodyScrollLock();
 };
 
-
 const setupDocCamera = () => {
   liveDocumentCamera.isOpen = false;
-  liveDocumentCamera.showToggle = true;
-  liveDocumentCamera.showBackButton = true; // Example: Configure back button visibility
-  liveDocumentCamera.successTime = 1500;
-  liveDocumentCamera.showHelpIcon = true;
-  liveDocumentCamera.forceManualCamera = false;
-  liveDocumentCamera.showPreviewScreen = true; // Opt-in: false by default (see docs/web/document-camera.md)
+  // Configuration comes from the configuration modal, whose controls start at
+  // the SDK defaults — apply it once up-front so the component is configured
+  // before the first launch as well.
+  applyDocumentCameraConfig();
 
   SmartCaptureModule.getInstance().init();
-  liveDocumentCaptureButton.addEventListener('click', openLiveCamera);
+  liveDocumentCaptureButton.addEventListener('click', openDocConfigModal);
+  docConfigCloseButton.addEventListener('click', dismissDocConfigModal);
+  docConfigResetButton.addEventListener('click', resetDocConfig);
+  docConfigLaunchButton.addEventListener('click', launchFromDocConfig);
+  docConfigInputs().forEach(input =>
+    input.addEventListener('input', refreshDocConfigValidation),
+  );
+  document.addEventListener('keydown', onDocConfigKeydown);
   saveButton.addEventListener('click', saveImage);
   resetCameraButton.addEventListener('click', resetCamera);
   const base64Field = document.getElementById('base64-img-input');
   if (base64Field) base64Field.addEventListener('focus', loadFullBase64);
 
-  if (IAD_ENABLED) {
-    if (inspectSignalsButton) inspectSignalsButton.addEventListener('click', openIadSignalsModal);
-    if (iadModalClose) iadModalClose.addEventListener('click', closeIadSignalsModal);
-    if (iadCopyJsonButton) iadCopyJsonButton.addEventListener('click', copyIadSignalsJson);
-    if (iadDownloadJsonButton) iadDownloadJsonButton.addEventListener('click', downloadIadSignalsJson);
-  } else {
-    if (inspectSignalsButton) inspectSignalsButton.classList.add('hidden');
-    if (iadModal) iadModal.classList.add('hidden');
-  }
   const docCloseBtn = document.getElementById('doc-close-results-button');
   if (docCloseBtn) docCloseBtn.addEventListener('click', goHome);
+  if (SHOW_IAD_SIGNALS) {
+    inspectSignalsButton.addEventListener('click', openIadSignalsModal);
+    iadModalClose.addEventListener('click', closeIadSignalsModal);
+    iadCopyJsonButton.addEventListener('click', copyIadSignalsJson);
+    iadDownloadJsonButton.addEventListener('click', downloadIadSignalsJson);
+  }
   liveDocumentCamera.addEventListener(LiveDocumentCamera.OpenEventName, onOpen);
   liveDocumentCamera.addEventListener(LiveDocumentCamera.CaptureEventName, onCapture);
   liveDocumentCamera.addEventListener(LiveDocumentCamera.DetectEventName, onDetect);

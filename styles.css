@@ -1029,3 +1029,299 @@ a.secondary:hover {
   left: 50%;
   transform: translate(-50%, -50%) scaleX(-1);
 }
+
+/* Document camera configuration modal */
+.docConfigModalContent {
+  width: min(720px, 94vw);
+  height: min(92vh, 900px);
+  text-align: left;
+  align-items: stretch;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 20px 20px;
+}
+
+.configIntro {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.configGroups {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 8px;
+}
+
+.configGroups::-webkit-scrollbar {
+  width: 10px;
+}
+
+.configGroups::-webkit-scrollbar-track {
+  background: var(--border-default);
+  border-radius: 6px;
+}
+
+.configGroups::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 6px;
+}
+
+.configGroup {
+  flex: 0 0 auto;
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  background: var(--iad-section-bg);
+  overflow: hidden;
+}
+
+.configGroupTitle {
+  margin: 0;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  background: var(--iad-section-header-bg);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.configGroupBody {
+  display: flex;
+  flex-direction: column;
+  background: var(--iad-section-body-bg);
+}
+
+.configGroupNote {
+  margin: 0;
+  padding: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  background: var(--iad-section-value-bg);
+  border-bottom: 1px solid var(--iad-row-divider);
+}
+
+.configRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px;
+  border-top: 1px solid var(--iad-row-divider);
+}
+
+.configRow:first-child {
+  border-top: none;
+}
+
+.configRowText {
+  min-width: 0;
+}
+
+.configLabel {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.configHint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.configDefault {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--b100);
+  color: var(--b600);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+body[data-theme="dark"] .configDefault {
+  background: var(--b600);
+  color: var(--b100);
+}
+
+.configRowControl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding-top: 2px;
+}
+
+.configUnit {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.configNumber,
+.configSelect {
+  min-height: 38px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-subtle);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.configNumber {
+  width: 84px;
+  text-align: right;
+}
+
+.configSelect {
+  min-width: 132px;
+  cursor: pointer;
+}
+
+.configNumber:focus-visible,
+.configSelect:focus-visible {
+  outline: none;
+  border-color: var(--b400p);
+  box-shadow: var(--focus-ring);
+}
+
+.configNumber[aria-invalid="true"] {
+  border-color: var(--hp500);
+  background: var(--hp100);
+  color: var(--hp700);
+}
+
+/* Toggle switch. The checkbox stays in the accessibility tree and keeps its
+   native keyboard behaviour; only its painting is replaced by the track. */
+.configSwitch {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.configSwitch input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.configSwitchTrack {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-subtle);
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.configSwitchTrack::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--w100);
+  box-shadow: 0 1px 3px rgb(12 12 14 / 30%);
+  transition: transform 120ms ease;
+}
+
+.configSwitch input:checked + .configSwitchTrack {
+  background: var(--b400p);
+  border-color: var(--b400p);
+}
+
+.configSwitch input:checked + .configSwitchTrack::after {
+  transform: translateX(20px);
+}
+
+.configSwitch input:focus-visible + .configSwitchTrack {
+  box-shadow: var(--focus-ring);
+}
+
+.configValidation {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--hp600);
+  background: var(--hp200);
+  color: var(--hp700);
+  font-size: 13px;
+}
+
+.configValidation--notice {
+  border-color: var(--b300);
+  background: var(--b100);
+  color: var(--b700);
+}
+
+body[data-theme="dark"] .configValidation--notice {
+  border-color: var(--b400p);
+  background: var(--b600);
+  color: var(--b100);
+}
+
+.configFooter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.configFooter .menuButton {
+  margin-top: 0;
+  max-width: none;
+}
+
+.configFooter #doc-config-reset {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.configFooter #doc-config-launch {
+  flex: 1;
+}
+
+.configFooter #doc-config-launch:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+}
+
+@media (max-width: 680px) {
+  .docConfigModalContent {
+    width: calc(100% - 16px);
+    height: 92dvh;
+    padding: 16px 14px;
+  }
+
+  .configRow {
+    gap: 12px;
+    padding: 12px 10px;
+  }
+
+  .configFooter {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
